@@ -17,6 +17,56 @@ from ..config import ARTIFACTS_DIR, ML_DIR
 if ML_DIR not in sys.path:
     sys.path.insert(0, ML_DIR)
 
+
+GOMP_DEBUG: dict = {"roots": [], "candidates": [], "loaded": None, "errors": []}
+
+
+def _preload_libgomp() -> None:
+    """Serverless images often lack libgomp.so.1, which LightGBM's (and
+    scikit-learn's) native libraries link against. Load a copy into the
+    global namespace BEFORE those packages import. We must not import
+    sklearn here to find its vendored copy, because sklearn itself needs
+    libgomp — so we locate site-packages via numpy (no OpenMP dependency)
+    and also fall back to the copy bundled in ml/artifacts."""
+    if os.name != "posix":
+        return
+    import ctypes
+    import glob
+    import sysconfig
+
+    roots: list[str] = []
+    try:
+        import numpy
+        roots.append(os.path.dirname(os.path.dirname(os.path.abspath(numpy.__file__))))
+    except Exception:
+        pass
+    try:
+        roots.append(sysconfig.get_paths().get("purelib", ""))
+    except Exception:
+        pass
+
+    candidates: list[str] = []
+    for sp in filter(None, dict.fromkeys(roots)):
+        candidates += glob.glob(os.path.join(sp, "*.libs", "libgomp*"))
+        candidates += glob.glob(os.path.join(sp, "**", "libgomp*"), recursive=True)
+    candidates += glob.glob(os.path.join(ARTIFACTS_DIR, "libgomp*"))
+    GOMP_DEBUG["roots"] = list(dict.fromkeys(roots))
+    GOMP_DEBUG["candidates"] = list(dict.fromkeys(candidates))
+    GOMP_DEBUG["artifacts_dir"] = ARTIFACTS_DIR
+    GOMP_DEBUG["artifacts_exists"] = os.path.isdir(ARTIFACTS_DIR)
+
+    for path in dict.fromkeys(candidates):
+        try:
+            ctypes.CDLL(path, mode=ctypes.RTLD_GLOBAL)
+            GOMP_DEBUG["loaded"] = path
+            return
+        except OSError as exc:
+            GOMP_DEBUG["errors"].append(f"{path}: {exc}")
+            continue
+
+
+_preload_libgomp()
+
 _lock = threading.Lock()
 _cache: dict = {}
 

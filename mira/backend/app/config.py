@@ -35,7 +35,11 @@ class Settings(BaseSettings):
     # demo clock — sits inside the engineered shock window (see generate_data.py)
     DEMO_TODAY: date = date(2026, 7, 15)
 
-    DB_URL: str = f"sqlite:///{os.path.join(DATA_DIR, 'mira.db')}"
+    # serverless platforms have a read-only filesystem except /tmp
+    DB_URL: str = (
+        "sqlite:////tmp/mira.db" if os.environ.get("VERCEL")
+        else f"sqlite:///{os.path.join(DATA_DIR, 'mira.db')}"
+    )
 
 
 settings = Settings()

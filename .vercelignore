@@ -1,0 +1,13 @@
+.git
+.claude
+docs
+*.pdf
+NABARD_Solution.txt
+implementation.txt
+mira/backend/.venv
+mira/backend/tests
+mira/backend/data/plots
+mira/backend/data/mira.db
+mira/frontend/node_modules
+mira/frontend/dist
+**/__pycache__

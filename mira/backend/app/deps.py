@@ -18,16 +18,20 @@ from .models import User
 _bearer = HTTPBearer(auto_error=False)
 
 
+# tunable so serverless cold starts (which re-seed 65 demo users) stay fast
+_PBKDF2_ITERS = int(os.environ.get("PBKDF2_ITERS", "100000"))
+
+
 def hash_password(password: str, salt: bytes | None = None) -> str:
     salt = salt or os.urandom(16)
-    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100_000)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, _PBKDF2_ITERS)
     return salt.hex() + "$" + dk.hex()
 
 
 def verify_password(password: str, stored: str) -> bool:
     try:
         salt_hex, dk_hex = stored.split("$")
-        dk = hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt_hex), 100_000)
+        dk = hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt_hex), _PBKDF2_ITERS)
         return hmac.compare_digest(dk.hex(), dk_hex)
     except ValueError:
         return False

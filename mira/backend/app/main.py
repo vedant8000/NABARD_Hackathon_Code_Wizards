@@ -81,7 +81,8 @@ app.include_router(reports.router)
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "demo_today": str(settings.DEMO_TODAY)}
+    from .services.scoring import GOMP_DEBUG
+    return {"ok": True, "demo_today": str(settings.DEMO_TODAY), "gomp": GOMP_DEBUG}
 
 
 @app.get("/api/ews-rules")
