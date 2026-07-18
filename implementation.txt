@@ -1,0 +1,549 @@
+================================================================================
+MIRA — Mitra for Intelligence, Risk & Analytics — FULL IMPLEMENTATION GUIDE
+NABARD Hackathon @ GFF 2026 — AI-Driven Cash Flow Prediction & Risk Flagging
+From-scratch, step-by-step build plan → top-notch polished prototype
+(Companion to NABARD_Solution.txt — read that first for the "why";
+ this document is the "how".)
+================================================================================
+
+CONTENTS
+  PHASE 0  — Project Setup & Repository Structure
+  PHASE 1  — Mock Data Generation (the fuel)
+  PHASE 2  — ML Core (forecasting, risk scoring, early warnings, SHAP)
+  PHASE 3  — Backend API (FastAPI)
+  PHASE 4  — MitraBot: The Gemini-Powered Chatbot (interactive AI assistant)
+  PHASE 5  — Frontend Foundation (React + Vite + Tailwind + PWA)
+  PHASE 6  — Udyami (Enterprise) App Screens
+  PHASE 7  — Adhikari (Field Officer) Dashboard Screens
+  PHASE 8  — Three.js Visual Layer (polished, premium UI)
+  PHASE 9  — Offline-First Layer (IndexedDB, service worker, sync)
+  PHASE 10 — Multilingual (i18n) + Voice Input
+  PHASE 11 — Reports (Credit Passport PDF)
+  PHASE 12 — Polish, Performance & Accessibility Pass
+  PHASE 13 — Demo Script, Testing & Submission Checklist
+
+================================================================================
+PHASE 0 — PROJECT SETUP & REPOSITORY STRUCTURE
+================================================================================
+0.1  Prerequisites (install once):
+     • Python 3.11+  • Node.js 20+  • Git
+0.2  Create the repo layout inside NABARD_Hackathon/:
+
+     mira/
+     ├── backend/
+     │   ├── app/
+     │   │   ├── main.py              # FastAPI entrypoint
+     │   │   ├── config.py            # settings, env loading
+     │   │   ├── db.py                # SQLAlchemy + SQLite
+     │   │   ├── models.py            # ORM models
+     │   │   ├── schemas.py           # Pydantic schemas
+     │   │   ├── routers/
+     │   │   │   ├── auth.py
+     │   │   │   ├── enterprises.py
+     │   │   │   ├── ledger.py
+     │   │   │   ├── scores.py
+     │   │   │   ├── alerts.py
+     │   │   │   ├── market.py        # prices + weather feeds
+     │   │   │   ├── chat.py          # MitraBot (Gemini)
+     │   │   │   └── reports.py       # Credit Passport PDF
+     │   │   └── services/
+     │   │       ├── scoring.py       # calls ML artifacts
+     │   │       └── recommend.py     # (signal × sector) → actions
+     │   ├── ml/
+     │   │   ├── generate_data.py     # Phase 1
+     │   │   ├── features.py
+     │   │   ├── train_forecast.py
+     │   │   ├── train_risk.py
+     │   │   ├── ews.py               # rule engine + anomaly
+     │   │   ├── explain.py           # SHAP reasons
+     │   │   └── artifacts/           # saved models (joblib)
+     │   ├── data/                    # generated CSVs + mira.db
+     │   ├── requirements.txt
+     │   └── .env                     # GEMINI_API_KEY=... (NEVER commit)
+     ├── frontend/
+     │   ├── src/
+     │   │   ├── main.tsx, App.tsx
+     │   │   ├── api/                 # typed fetch client + offline queue
+     │   │   ├── db/                  # Dexie (IndexedDB) schema
+     │   │   ├── i18n/                # en.json, hi.json
+     │   │   ├── components/          # shared UI (cards, charts, chatbot)
+     │   │   ├── three/               # Three.js scenes (Phase 8)
+     │   │   ├── pages/udyami/        # Phase 6 screens
+     │   │   ├── pages/adhikari/      # Phase 7 screens
+     │   │   └── sw/                  # service worker (Workbox)
+     │   ├── public/                  # manifest.json, icons
+     │   └── package.json
+     └── README.md
+
+0.3  Backend bootstrap:
+     cd mira/backend
+     python -m venv .venv && .venv\Scripts\activate
+     pip install fastapi uvicorn[standard] sqlalchemy pydantic-settings
+                 pandas numpy scikit-learn lightgbm shap statsmodels joblib
+                 google-genai python-jose[cryptography] passlib reportlab httpx
+     pip freeze > requirements.txt
+
+0.4  Frontend bootstrap:
+     cd mira/frontend
+     npm create vite@latest . -- --template react-ts
+     npm i tailwindcss @tailwindcss/vite recharts react-router-dom
+           react-i18next i18next dexie zustand
+     npm i three @types/three @react-three/fiber @react-three/drei
+     npm i -D vite-plugin-pwa workbox-window
+
+0.5  Secrets hygiene (IMPORTANT):
+     • Create backend/.env with:  GEMINI_API_KEY=<your key>
+     • Add ".env" and "ml/artifacts/*.joblib" (optional) to .gitignore.
+     • NEVER paste the API key into source code, commits, or the frontend
+       bundle. The browser must never see the key — all Gemini calls go
+       through the backend /api/chat endpoint.
+
+================================================================================
+PHASE 1 — MOCK DATA GENERATION
+================================================================================
+Goal: 60–80 enterprises × 30 months of daily data, seeded & reproducible,
+with engineered Green/Amber/Red storylines. (Design rationale: solution doc §6.)
+
+1.1  generate_data.py — structure:
+     SECTORS = {dairy, poultry, food_processing, handicrafts, rural_retail}
+     DISTRICTS = 4 (2 normal, 1 drought-year, 1 flood-event)
+
+1.2  Generate in this order (each writes a CSV into backend/data/):
+     a) enterprises.csv — id, name (realistic Hindi/English names), type
+        (SHG/FPO/Individual), sector, village, district, size_factor,
+        established_date, members_count.
+     b) weather.csv — per district per day: rainfall_mm, normal_mm, tmax.
+        Use monthly climatology + noise; drought district = monsoon deficit
+        45%; flood district = 2 extreme-rain weeks. Add a 5-day forecast
+        table regenerated "as of today".
+     c) prices.csv — daily modal prices, Agmarknet schema: maize, soymeal,
+        fodder index, milk procurement, veg index. Give maize/soymeal a
+        realistic 2024-style spike window (+18% over 60 days) near the
+        demo's "now".
+     d) ledger.csv — per enterprise per day. income = sector seasonality
+        curve × size × trend × noise; expenses = fixed + variable(input
+        prices); savings deposits on group meeting days; loan EMIs monthly.
+        Sector curves:
+          dairy: daily income, Nov–Feb +20%, Apr–Jun −20%, heat days −15%
+          poultry: 6-week batch settlements; feed cost tied to maize/soymeal
+          handicrafts: order lumps around Aug–Nov (festivals), receivable lag
+          rural_retail: steady + harvest bumps (Oct/Apr) + monsoon dip
+          food_processing: raw-cost tied to veg/oilseed index, Diwali spike
+     e) digital_activity.csv — daily txn_count, value_index, inflow_outflow,
+        payer_diversity; correlated with income but with activity decline
+        LEADING income decline by ~3 weeks in stressed cases.
+     f) Shock injection — pick ~12 enterprises: feed-price victims (poultry
+        in any district), drought victims (dairy/retail in district 3),
+        idiosyncratic shocks (expense spike + repayment slippage). ~10
+        borderline Amber cases (single weak signal). Rest healthy Green.
+     g) labels.csv — stressed_at_month_t = 1 if (net CF < 0 for 2 of next 3
+        months) OR (missed EMI within 3 months).
+
+1.3  Loader: a load_to_sqlite() function that ingests all CSVs into
+     mira.db (SQLAlchemy models from Phase 3). Add seed users:
+     one officer account + one enterprise account per enterprise.
+
+1.4  Verify: quick matplotlib sanity plots (income curves per sector,
+     price spike, drought rainfall) saved to data/plots/ — these double
+     as slides for the pitch deck.
+
+================================================================================
+PHASE 2 — ML CORE
+================================================================================
+2.1  features.py — build_features(enterprise_id, as_of_month) returning one
+     row with: net-CF lags 1–12, rolling mean/std 3/6/12m, trend slope,
+     month sin/cos, festival flag, savings-regularity entropy, on-time EMI
+     rate, expense/income ratio, digital-activity 30/90d slope,
+     inflow/outflow drift, sector input-cost momentum (30/60/90d), output-
+     price momentum, cost-price squeeze index, rainfall deviation (monthly
+     + monsoon cumulative), heat-day count, forecast-severity, sector
+     one-hot, enterprise size. Build a pooled panel across ALL enterprises
+     (solves cold start).
+
+2.2  train_forecast.py:
+     • Baselines: seasonal-naive + Holt-Winters (statsmodels) per series.
+     • Main: LightGBM quantile regressors — for each horizon h∈{1..6},
+       three models (alpha=0.1, 0.5, 0.9) predicting monthly net cash flow
+       (and optionally income/expense separately with two more sets).
+     • Validation: expanding-window CV over the last 8 months; report WAPE
+       per horizon vs baseline into ml/artifacts/backtest_report.json —
+       surface this in the dashboard's "About the model" modal (judges
+       love honest numbers).
+     • Save models: joblib to ml/artifacts/forecast_h{h}_q{q}.joblib.
+
+2.3  train_risk.py:
+     • Transparent score: compute 5 sub-scores (S1 cash-flow health 30%,
+       S2 repayment discipline 25%, S3 digital trend 15%, S4 market stress
+       15%, S5 climate exposure 15%) as documented formulas in scoring.py —
+       min-max scaled 0–100, weighted sum → MIRA Score. Bands: ≥70
+       Green, 45–69 Amber, <45 Red.
+     • ML probability: LightGBM classifier on labels.csv (stress within
+       3 months). Calibrate with sklearn CalibratedClassifierCV. Report
+       AUC/precision/recall in backtest_report.json.
+     • explain.py: shap.TreeExplainer over the classifier → top-3 drivers
+       per enterprise as (feature_label, direction, magnitude) with human
+       labels ("Feed cost ↑18%", "Savings regularity ↓").
+
+2.4  ews.py — rule engine returning a list of Alert objects:
+     EWS-01 SAVINGS_BREAK, EWS-02 REPAY_SLIP, EWS-03 CF_DETERIORATION,
+     EWS-04 RUNWAY_LOW, EWS-05 TXN_SLOWDOWN, EWS-06 INPUT_PRICE_SHOCK,
+     EWS-07 OUTPUT_PRICE_DROP, EWS-08 CLIMATE_ALERT, EWS-09 EXPENSE_SPIKE,
+     EWS-10 CONCENTRATION, plus EWS-99 ANOMALY via IsolationForest on the
+     feature vector. Each alert: {code, severity, message_en, message_hi,
+     action_en, action_hi, audience: enterprise|officer|both}.
+     IMPORTANT: encode the rule thresholds in a plain dict — the same
+     rules are re-implemented in TypeScript for on-device offline mode
+     (Phase 9), so keep them declarative.
+
+2.5  recommend.py — RECOMMENDATIONS[(sector, ews_code)] → action strings
+     (EN + HI). Fill the full matrix (5 sectors × 11 codes, with a
+     sensible default per code).
+
+2.6  score_all.py — batch job: for every enterprise, compute features →
+     forecast (P10/P50/P90 × 6 months) → sub-scores → classifier
+     probability → SHAP drivers → alerts → write to `scores` and `alerts`
+     tables. Run at startup and expose POST /api/admin/rescore.
+
+================================================================================
+PHASE 3 — BACKEND API (FastAPI)
+================================================================================
+3.1  models.py: Enterprise, User(role), LedgerEntry, Score, Alert,
+     CommodityPrice, WeatherDay, ChatMessage (for chat history),
+     InterventionLog.
+
+3.2  Endpoints (all JSON, JWT bearer auth, role-guarded):
+     AUTH      POST /api/auth/login → {token, role, enterprise_id?}
+     ENTERPRISE (role=enterprise)
+       GET  /api/me/summary          → health card (score, band, reason,
+                                       balance, next EMI)
+       GET  /api/me/forecast         → 6×{month, p10, p50, p90, income, exp}
+       GET  /api/me/alerts           → active alert cards
+       POST /api/me/ledger           → add entry (accepts client_uuid for
+                                       idempotent offline sync)
+       POST /api/me/ledger/batch     → sync queue flush
+       GET  /api/me/ledger?from=&to= → history
+     OFFICER (role=officer)
+       GET  /api/portfolio/overview  → KPI tiles + distributions
+       GET  /api/enterprises?sort=risk&filter=... → list
+       GET  /api/enterprises/{id}    → 360° profile (score, sub-scores,
+                                       drivers, forecast, alerts, ledger)
+       GET  /api/alerts?group=code   → risk panel
+       POST /api/alerts/{id}/ack     → intervention tracking
+       POST /api/whatif              → {rain_deficit_pct?, price_shock_pct?}
+                                       → re-scored portfolio (recompute
+                                       features with shocked climate/price
+                                       columns, rerun forecaster)
+     SHARED
+       GET  /api/market/prices, /api/market/weather
+       POST /api/chat  (Phase 4)     GET /api/reports/{id}/credit-passport
+       GET  /api/model/card          → backtest metrics + model card JSON
+
+3.3  main.py: CORS for the Vite dev origin, startup hook that (a) builds
+     the DB from CSVs if missing, (b) runs score_all if scores empty.
+     One command runs everything: uvicorn app.main:app --reload
+
+3.4  Serve frontend build in production mode: mount StaticFiles at "/"
+     pointing to ../frontend/dist so the whole demo is ONE process.
+
+================================================================================
+PHASE 4 — MITRABOT: THE GEMINI-POWERED CHATBOT
+================================================================================
+An interactive assistant embedded in BOTH interfaces, fully grounded in the
+problem statement: it answers using the enterprise's own ledger, forecast,
+risk score, alerts, sector intelligence, prices, and weather — in simple
+Hindi or English. This is a headline feature; build it well.
+
+4.1  Security model:
+     • GEMINI_API_KEY lives ONLY in backend/.env, loaded via
+       pydantic-settings. Frontend calls POST /api/chat; backend calls
+       the Gemini API. Key never ships to the browser.
+     • Rate-limit: max ~20 messages/min per user (simple in-memory bucket).
+
+4.2  Install & client (backend/app/routers/chat.py):
+       pip install google-genai
+       from google import genai
+       client = genai.Client(api_key=settings.GEMINI_API_KEY)
+     Model: "gemini-2.0-flash" (fast + cheap; upgrade to a pro model if
+     quota allows). Use streaming (generate_content_stream) and relay
+     tokens to the browser via StreamingResponse (SSE), so replies feel
+     instant.
+
+4.3  Context injection (the thing that makes it "relate completely with
+     the problem statement"): before each conversation, build a system
+     prompt with the user's live data. Two variants:
+
+     ENTERPRISE persona system prompt (assembled server-side):
+       "You are MitraBot (मित्रबॉट), the friendly financial companion inside
+        MIRA, a NABARD platform that predicts cash flow and flags
+        risk for rural micro enterprises. You are talking to the owner of:
+        {name}, a {sector} {type} in {village}, {district}.
+        THEIR CURRENT DATA (use it — never invent numbers):
+        - MIRA Score: {score}/100 ({band}). Top drivers: {drivers}.
+        - 6-month net cash flow forecast (P50): {forecast_table}
+        - Active alerts: {alerts_with_actions}
+        - Savings balance ₹{bal}; next EMI ₹{emi} on {date}; on-time
+          streak {n} months.
+        - Market: {sector_relevant_price_lines}. Weather: {weather_line}.
+        RULES: Reply in the user's language ({lang}); use very simple
+        words (the user may have limited literacy); short sentences;
+        amounts in ₹ Indian format; give ONE clear action per answer;
+        when asked about loans/credit, explain how their score and
+        on-time streak help them get bank credit; never give guarantees,
+        never invent data not listed above; if asked something outside
+        their business finances, gently steer back."
+
+     OFFICER persona system prompt: same structure but portfolio-level
+     stats, and the tone is professional ("summarize the 7 riskiest
+     poultry units and the common driver", "draft a visit plan").
+
+     Prompt-structure note: put the long static instruction part FIRST
+     and the volatile per-user data AFTER it (helps implicit caching).
+
+4.4  Tool use (stretch, do after the basic bot works): give the model
+     typed function-calling tools so it can pull data on demand instead
+     of stuffing everything in the prompt:
+       get_ledger(range), get_forecast(), get_alerts(),
+       get_price_history(commodity), simulate("what if milk price -10%")
+     Implement with Gemini function calling (declare tools in the
+     generate_content config; loop on function_call parts). The
+     simulate tool calls the same /api/whatif logic → the bot can answer
+     "अगर बारिश कम हुई तो क्या होगा?" with real model output. THIS is the
+     demo moment that wins hackathons.
+
+4.5  Endpoint contract:
+     POST /api/chat  {messages: [{role, content}...], lang: "hi"|"en"}
+     → SSE stream of text deltas; on completion, persist to ChatMessage
+     table so history survives refresh. Handle Gemini API errors /
+     APIStatusError with a friendly fallback message. Also check
+     stop_reason before reading content.
+
+4.6  Frontend widget (components/MitraBot.tsx):
+     • Floating action button (bottom-right) with a friendly mascot icon;
+       opens a chat panel (mobile: full-screen sheet; desktop: 380px card).
+     • Streaming text rendering, typing indicator, suggested quick-chips
+       per persona: enterprise → "मेरा स्कोर क्यों कम है?", "अगले महीने कितनी
+       कमाई होगी?", "पैसे कैसे बचाऊँ?"; officer → "Top 5 risky enterprises",
+       "Explain EWS-06 spike", "Draft SMS to affected members".
+     • Voice input mic button (reuses Phase 10 speech hook).
+     • Offline behavior: if navigator.onLine is false, disable input and
+       show "MitraBot needs internet — your data entry still works
+       offline" (honest, and it demonstrates you thought about it).
+
+================================================================================
+PHASE 5 — FRONTEND FOUNDATION
+================================================================================
+5.1  Design system first (this is what "polished" means):
+     • tailwind config: palette — deep green #14532d (NABARD-esque),
+       warm cream background #FAF7F0, terracotta accent #C2410C, band
+       colors: green #16a34a / amber #d97706 / red #dc2626. Fonts:
+       "Fraunces" (display) + "Inter"-alternative like "Manrope" (body)
+       + "Noto Sans Devanagari" for Hindi. Rounded-2xl cards, soft
+       shadows, generous spacing.
+     • Build shared primitives ONCE: <Card>, <StatTile>, <Badge band>,
+       <ScoreGauge> (SVG radial), <TrendArrow>, <BigButton icon>,
+       <MoneyText> (Indian digit grouping), <EmptyState>, <Skeleton>.
+     • Before writing any chart, follow the dataviz skill guidance:
+       consistent series colors, dark/light-safe, tooltips, axis labels.
+5.2  Routing: /login → role switch; /u/* (Udyami) and /a/* (Adhikari)
+     route trees with role guards. Zustand store for auth + language +
+     online status.
+5.3  API client: thin typed wrapper with automatic queue-on-offline for
+     mutating calls (Phase 9 wires the queue).
+5.4  Charts (Recharts): ForecastChart (P50 line + P10–P90 shaded band +
+     history), CashFlowBars (income vs expense monthly), PriceSparkline,
+     RainfallDeviationBars, RiskDistributionDonut, SectorRiskMatrix
+     (heatmap grid).
+
+================================================================================
+PHASE 6 — UDYAMI (ENTERPRISE) APP SCREENS
+================================================================================
+Mobile-first, icon-first, <30s data entry. Five screens:
+6.1  Home / Health Card: full-width band-colored gradient card with
+     ScoreGauge, one-line reason (from top SHAP driver), savings balance,
+     next EMI chip, on-time streak badge (gamified: 🔥 streak). Below:
+     active alert cards (max 3) + "Add today's entry" BigButton.
+6.2  Add Entry: 4 giant tiles (Income आमदनी / Expense खर्च / Savings बचत /
+     Loan क़र्ज़) → numeric keypad screen (big keys, ₹ display) → category
+     icon grid (sector-aware: milk 🥛, feed 🌽, eggs 🥚, kirana 🛒 …) →
+     success animation (confetti burst, streak increment). Writes go to
+     IndexedDB first, then sync.
+6.3  My Forecast: ForecastChart + plain-language summary generated
+     client-side from the numbers ("अगस्त और सितम्बर में पैसा कम रहेगा —
+     ₹8,000 बचाकर रखें"), month chips colored by predicted band.
+6.4  Alerts & Advice: card stack; each card = icon, cause line, ONE action
+     button ("Done ✓" / "Ask MitraBot" which opens the bot pre-filled with
+     the alert context — nice integration touch).
+6.5  My Loan: outstanding, EMI schedule timeline, on-time streak, and a
+     "My Credit Passport" preview → explains that good records unlock
+     bank loans (the NABARD value story, in the user's pocket).
+
+================================================================================
+PHASE 7 — ADHIKARI (FIELD OFFICER) DASHBOARD SCREENS
+================================================================================
+Desktop-first (works on mobile). Five screens:
+7.1  Portfolio Overview: KPI StatTiles (total enterprises, Red/Amber/Green
+     counts with deltas, open alerts, avg score trend sparkline);
+     RiskDistributionDonut; SectorRiskMatrix; district block map (the
+     Three.js village scene from Phase 8 doubles here as the hero) plus a
+     simple 2D fallback grid of village chips colored by avg band.
+7.2  Enterprise List: table with search + filters (sector, village, band),
+     sortable columns: name, sector, score (with TrendArrow), last entry,
+     open alerts. Row click → 360°. "Download my beat" button (Phase 9).
+7.3  Enterprise 360°: header (name, sector, village, ScoreGauge, band),
+     5 sub-score horizontal bars, SHAP driver chips (▲▼ colored),
+     ForecastChart with band, ledger timeline, alert history with ack
+     buttons, InterventionLog notes, "Generate Credit Passport" button.
+7.4  Risk Panel: alerts grouped by EWS code with affected-count badges
+     ("EWS-06 Feed price shock — 7 poultry units in Block Kharagpur"),
+     bulk actions (acknowledge all / export list), severity filter.
+7.5  What-If Scenario: two sliders (rainfall deficit %, input price
+     shock %) → calls /api/whatif → animated re-sort of the enterprise
+     list + before/after Red-count comparison. Pair with MitraBot: "ask
+     the bot to explain this scenario".
+
+================================================================================
+PHASE 8 — THREE.JS VISUAL LAYER (PREMIUM POLISH)
+================================================================================
+Use @react-three/fiber + drei. Three.js is garnish, not the meal — apply
+it where it adds delight, with graceful fallbacks.
+
+8.1  Login / Landing hero (three/HeroField.tsx):
+     A low-poly stylized rural landscape — gently undulating green field
+     plane (vertex-displaced PlaneGeometry), floating instanced particles
+     as fireflies/grain motes, a slowly rotating sun/moon light cycle,
+     soft fog. Camera drifts subtly with mouse parallax. Overlay the
+     MIRA wordmark + login card with backdrop-blur. This first
+     impression IS the polish judges remember.
+
+8.2  Portfolio 3D Village Map (three/VillageMap.tsx) — officer overview:
+     Each enterprise = a small instanced 3D marker (hut/box) placed on a
+     district grid; marker color = band, height = risk (inverted score);
+     hover → HTML tooltip (drei <Html>) with name + score; click →
+     navigate to 360°. Animate transitions when What-If re-scores
+     (markers smoothly grow/recolor via lerp) — a stunning scenario demo.
+
+8.3  Score orb (three/ScoreOrb.tsx) — optional accent on Health Card:
+     a small shader-gradient sphere pulsing in the band color.
+
+8.4  Performance & fallback rules (non-negotiable):
+     • Lazy-load all three/ modules (React.lazy + Suspense) so the core
+       app stays light for 2G users.
+     • Cap devicePixelRatio at 1.5; frameloop="demand" where static;
+       instanced meshes only; no postprocessing on mobile.
+     • If (navigator.hardwareConcurrency <= 4 || saveData || offline):
+       render the 2D fallback (static SVG illustration / chip grid)
+       automatically. Offline-first constraint stays intact.
+
+================================================================================
+PHASE 9 — OFFLINE-FIRST LAYER
+================================================================================
+9.1  Dexie schema (db/index.ts): tables — ledgerQueue (client_uuid PK),
+     ledgerCache, summaryCache, forecastCache, alertsCache, beatCache
+     (officer's downloaded enterprises), meta (lastSync).
+9.2  Write path: Add-Entry ALWAYS writes IndexedDB first → UI updates
+     optimistically → sync worker flushes queue via POST /api/me/ledger/
+     batch when online (navigator.onLine + 'online' event + Workbox
+     Background Sync as belt-and-braces). Server dedupes on client_uuid.
+9.3  Read path: network-first with cache fallback; every GET response is
+     mirrored into the corresponding cache table; UI renders cache
+     immediately with an "offline data as of {time}" pill when stale.
+9.4  On-device intelligence (the differentiator): port the EWS rule
+     thresholds (Phase 2.4 declarative dict → generated ews.rules.json
+     shared by both codebases) into a TS module + a seasonal-naive
+     forecast function. When offline, Health Card band + basic alerts
+     recompute locally from cached ledger — the app NEVER shows a dead
+     screen.
+9.5  Service worker (vite-plugin-pwa): precache app shell + fonts +
+     i18n JSON; runtime cache API GETs (NetworkFirst, 24h);
+     manifest.json (name MIRA (मीरा), icons 192/512, standalone,
+     theme #14532d) → installable on Android home screen.
+9.6  "Download my beat" (officer): one button fetches full profiles of
+     their enterprises into beatCache with a progress bar; 360° pages
+     work fully offline in the field.
+9.7  Demo the offline story explicitly: DevTools → Network → Offline →
+     add entries → go online → watch them sync. Rehearse it.
+
+================================================================================
+PHASE 10 — MULTILINGUAL + VOICE
+================================================================================
+10.1 react-i18next with en.json + hi.json for EVERY user-facing string
+     (structure keys by screen). Language toggle in header, persisted.
+     Numbers via Intl.NumberFormat('en-IN'). Dates in local format.
+10.2 Alert/recommendation strings come bilingual from the backend
+     (message_en/message_hi) — pick by lang.
+10.3 Voice input hook (useSpeech.ts): Web Speech API, lang 'hi-IN'
+     fallback 'en-IN'; used in Add-Entry amount field and MitraBot input.
+     Feature-detect; hide mic if unsupported.
+10.4 Stretch: TTS playback of alerts (speechSynthesis) for low-literacy
+     users — one small 🔊 button per alert card.
+
+================================================================================
+PHASE 11 — REPORTS: CREDIT PASSPORT PDF
+================================================================================
+11.1 reportlab template (A4): header with MIRA + "NABARD Hackathon
+     prototype" branding, enterprise identity block, MIRA Score with
+     band, 5 sub-scores table, 6-month forecast table (P10/P50/P90),
+     12-month cash flow summary, repayment history + on-time streak,
+     active risk flags, SHAP top drivers, disclaimer footer ("model
+     outputs are decision-support, not a credit decision").
+11.2 GET /api/reports/{id}/credit-passport → application/pdf. Button in
+     360° and in Udyami "My Loan" (self-download = data ownership story).
+
+================================================================================
+PHASE 12 — POLISH, PERFORMANCE & ACCESSIBILITY PASS
+================================================================================
+12.1 Micro-interactions: page transitions (150ms fade/slide), number
+     count-up on KPI tiles, skeleton loaders everywhere, confetti on
+     entry streaks, animated band color transitions on What-If.
+12.2 Dark mode via Tailwind 'dark:' (charts + Three.js scene adapt).
+12.3 Lighthouse pass: target PWA ✓, Performance ≥85 mobile (lazy Three.js,
+     font-display swap, code-split routes), a11y ≥95 (labels, contrast,
+     focus rings, alt text).
+12.4 Error states: every fetch has loading/empty/error/offline variants.
+12.5 Seed the demo clock: a DEMO_TODAY constant so "today" sits right at
+     the engineered price-spike/drought window and forecasts look lively.
+
+================================================================================
+PHASE 13 — DEMO SCRIPT, TESTING & SUBMISSION CHECKLIST
+================================================================================
+13.1 Three-story demo arc (rehearse in this order, ~6 minutes):
+     1) UDYAMI: log in as Lakshmi Dairy SHG (Amber) → 30-second entry →
+        Health Card explains WHY (heat alert + fodder prices) → ask
+        MitraBot "मेरा स्कोर क्यों गिरा?" → grounded, simple answer + action.
+     2) ADHIKARI: portfolio 3D village map → Risk Panel shows EWS-06 feed
+        spike hitting 7 poultry units BEFORE any missed payment → open a
+        Red 360° → SHAP drivers → generate Credit Passport PDF.
+     3) WHAT-IF: drag rainfall −30% → map re-colors live → MitraBot
+        explains the scenario → close with offline demo (airplane mode →
+        entry → sync).
+13.2 Tests (pragmatic): pytest for scoring math, EWS rules, sync
+     idempotency; one Playwright happy-path per persona; manual offline
+     matrix (entry offline → sync, beat download → offline 360°).
+13.3 Submission package: README (setup = 3 commands), architecture
+     diagram, model card + backtest metrics, screenshots/GIFs, 2-min
+     video, this implementation doc + NABARD_Solution.txt.
+13.4 Definition of "top-notch done":
+     □ One-command backend, one-command frontend (or single served build)
+     □ All 10 screens functional with real generated data
+     □ Forecast beats baseline in backtest_report.json and is shown in-app
+     □ 11 EWS signals firing on the engineered storylines
+     □ MitraBot streaming, grounded, bilingual, with what-if tool
+     □ Full offline entry + on-device alerts + beat download
+     □ Three.js hero + village map with 2D fallback
+     □ Hindi/English toggle everywhere; voice input works
+     □ Credit Passport PDF downloads
+     □ Lighthouse PWA badge; installs to home screen
+     □ .env only secrets; key never in repo or bundle
+
+================================================================================
+BUILD ORDER SUMMARY (dependency-safe)
+================================================================================
+  0 Setup → 1 Data → 2 ML → 3 API → 5 Frontend foundation →
+  6 Udyami → 7 Adhikari → 4 MitraBot → 9 Offline → 10 i18n/voice →
+  8 Three.js → 11 PDF → 12 Polish → 13 Demo
+  (MitraBot after the screens exist so it has real context to ground on;
+   Three.js late so core functionality is never blocked by polish.)
+
+================================================================================
+END — ready to start Phase 0 on your go.
+================================================================================

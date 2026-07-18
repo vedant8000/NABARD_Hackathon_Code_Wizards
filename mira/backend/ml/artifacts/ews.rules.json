@@ -1,0 +1,135 @@
+{
+ "EWS-01": {
+  "name": "SAVINGS_BREAK",
+  "severity": "amber",
+  "desc": "No savings deposit in 2 consecutive months",
+  "messages": [
+   "Savings deposits have stopped for 2 months.",
+   "2 महीने से बचत जमा नहीं हुई है।",
+   "Restart small weekly deposits — even ₹100 keeps the group record strong.",
+   "छोटी साप्ताहिक बचत फिर शुरू करें — ₹100 भी समूह का रिकॉर्ड मज़बूत रखता है।"
+  ]
+ },
+ "EWS-02": {
+  "name": "REPAY_SLIP",
+  "severity": "red",
+  "desc": "EMI missed in latest month",
+  "messages": [
+   "Last EMI was missed.",
+   "पिछली किस्त (EMI) छूट गई है।",
+   "Talk to your field officer about part-payment before the next due date.",
+   "अगली तारीख़ से पहले अधिकारी से आंशिक भुगतान की बात करें।"
+  ]
+ },
+ "EWS-03": {
+  "name": "CF_DETERIORATION",
+  "severity": "red",
+  "desc": "Forecast net cash flow negative for >=2 of next 3 months",
+  "messages": [
+   "Cash flow is predicted to be negative in the coming months.",
+   "आने वाले महीनों में खर्च कमाई से ज़्यादा रहने का अनुमान है।",
+   "Cut non-urgent expenses now and build a small buffer.",
+   "ग़ैर-ज़रूरी खर्च अभी घटाएँ और थोड़ा पैसा बचाकर रखें।"
+  ]
+ },
+ "EWS-04": {
+  "name": "RUNWAY_LOW",
+  "severity": "amber",
+  "threshold_months": 1.0,
+  "desc": "Savings buffer below 1 month of average expenses",
+  "messages": [
+   "Savings buffer is below 1 month of expenses.",
+   "बचत 1 महीने के खर्च से भी कम है।",
+   "Set aside a fixed amount from each sale until you have 1 month saved.",
+   "हर बिक्री से थोड़ी रक़म अलग रखें जब तक 1 महीने की बचत न हो।"
+  ]
+ },
+ "EWS-05": {
+  "name": "TXN_SLOWDOWN",
+  "severity": "amber",
+  "threshold": -0.3,
+  "desc": "Digital activity down >30% vs 3-month norm",
+  "messages": [
+   "Your digital sales activity has slowed sharply.",
+   "आपकी डिजिटल बिक्री में तेज़ गिरावट है।",
+   "Check demand — talk to regular buyers; consider a small promotion.",
+   "मांग जाँचें — नियमित ख़रीदारों से बात करें; छोटा ऑफ़र आज़माएँ।"
+  ]
+ },
+ "EWS-06": {
+  "name": "INPUT_PRICE_SHOCK",
+  "severity": "amber",
+  "threshold": 0.15,
+  "desc": "Sector input cost up >15% in 3 months",
+  "messages": [
+   "Input prices for your sector rose sharply.",
+   "आपके काम की लागत (कच्चा माल) तेज़ी से बढ़ी है।",
+   "Buy inputs in bulk with your group/FPO now to lock the price.",
+   "समूह/FPO के साथ थोक में ख़रीदें ताकि दाम तय हो जाए।"
+  ]
+ },
+ "EWS-07": {
+  "name": "OUTPUT_PRICE_DROP",
+  "severity": "amber",
+  "threshold": -0.12,
+  "desc": "Sector output price down >12% in 3 months",
+  "messages": [
+   "Selling prices for your produce have dropped.",
+   "आपकी उपज के बिक्री दाम गिरे हैं।",
+   "Hold stock if storable, or find an alternate buyer via your FPO.",
+   "रुक सकने वाला माल रोकें, या FPO से दूसरा ख़रीदार खोजें।"
+  ]
+ },
+ "EWS-08": {
+  "name": "CLIMATE_ALERT",
+  "severity": "amber",
+  "rain_dev": -0.4,
+  "heat_days": 15,
+  "heat_sectors": [
+   "dairy",
+   "poultry"
+  ],
+  "desc": "Rainfall deficit >40% of normal, or a heatwave spell for heat-sensitive sectors",
+  "messages": [
+   "Weather risk: rainfall deficit or heatwave in your area.",
+   "मौसम जोख़िम: आपके इलाक़े में कम बारिश या लू।",
+   "Protect animals/stock from heat; plan water use; avoid new EMIs this month.",
+   "पशु/माल को गर्मी से बचाएँ; पानी की योजना बनाएँ; इस महीने नया क़र्ज़ न लें।"
+  ]
+ },
+ "EWS-09": {
+  "name": "EXPENSE_SPIKE",
+  "severity": "amber",
+  "z": 2.5,
+  "desc": "Monthly expense anomaly vs own history",
+  "messages": [
+   "An unusually large expense was recorded.",
+   "एक असामान्य बड़ा खर्च दर्ज हुआ है।",
+   "If it was an emergency, tell your officer — support schemes may apply.",
+   "अगर आपात खर्च था तो अधिकारी को बताएँ — सहायता योजना मिल सकती है।"
+  ]
+ },
+ "EWS-10": {
+  "name": "CONCENTRATION",
+  "severity": "info",
+  "threshold": 0.25,
+  "desc": "Income highly concentrated (low payer diversity)",
+  "messages": [
+   "Most income comes from very few buyers.",
+   "ज़्यादातर कमाई बहुत कम ख़रीदारों से आती है।",
+   "Add one more buyer or market channel to reduce risk.",
+   "जोख़िम घटाने के लिए एक और ख़रीदार या बाज़ार जोड़ें।"
+  ]
+ },
+ "EWS-99": {
+  "name": "ANOMALY",
+  "severity": "amber",
+  "desc": "Unusual overall pattern flagged by anomaly model",
+  "messages": [
+   "Your recent pattern looks unusual compared to normal.",
+   "आपका हालिया रिकॉर्ड सामान्य से अलग दिख रहा है।",
+   "Review this month's entries with your field officer.",
+   "इस महीने की एंट्री अधिकारी के साथ जाँचें।"
+  ]
+ }
+}

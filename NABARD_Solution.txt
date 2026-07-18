@@ -1,0 +1,737 @@
+================================================================================
+NABARD HACKATHON @ GFF 2026 — COMPREHENSIVE SOLUTION DOCUMENT
+Problem Statement: AI-Driven Cash Flow Prediction & Risk Flagging System
+for Rural Micro Enterprises
+================================================================================
+
+SOLUTION NAME:  "MIRA" — Mitra for Intelligence, Risk & Analytics
+                An AI-driven cash flow prediction, early-warning and risk
+                flagging platform for SHGs, FPOs and rural micro-entrepreneurs,
+                and the field officers / bankers who support them.
+
+--------------------------------------------------------------------------------
+TABLE OF CONTENTS
+--------------------------------------------------------------------------------
+ 1. Executive Summary
+ 2. Problem Understanding & Why It Matters (Research Context)
+ 3. Key Research Findings That Shape the Solution
+ 4. Solution Overview — What MIRA Is
+ 5. System Architecture
+ 6. Data Strategy (Multi-Source Integration + Mock Dataset Design)
+ 7. AI/ML Modelling Approach
+    7.1 Cash Flow Forecasting Engine (3–6 month horizon)
+    7.2 Composite Risk Scoring Engine
+    7.3 Early Warning Signal (EWS) Rules + Anomaly Detection
+    7.4 Explainability & Actionable Recommendations
+ 8. Sector-Specific Risk Models (Dairy, Poultry, Food Processing,
+    Handicrafts, Rural Retail)
+ 9. Climate & Market Risk Integration
+10. Product Design — Two Personas, Two Experiences
+    10.1 Micro-Enterprise App (Udyami view)
+    10.2 Field Officer Dashboard (Adhikari view)
+11. Offline-First & Low-Network Design
+12. Multilingual & Accessibility Design
+13. Privacy, Ethics & Data Protection
+14. Technology Stack (Hackathon Prototype)
+15. Implementation Roadmap (Hackathon Build Plan)
+16. Alignment with NABARD's Value-Creation Goals
+17. Why This Solution Wins (Differentiators)
+18. Future Scale-Up Path (Beyond the Hackathon)
+19. References & Research Sources
+
+================================================================================
+1. EXECUTIVE SUMMARY
+================================================================================
+India has ~14.4 million SHGs covering ~17.7 crore households (NABARD SHG-BLP,
+FY2023-24), thousands of FPOs, and millions of individual rural entrepreneurs
+in dairy, poultry, food processing, handicrafts and rural retail. Banks
+disbursed over Rs. 2.09 lakh crore to SHGs in FY2023-24 alone — yet financial
+health monitoring of these enterprises is still manual (paper registers,
+periodic field visits, subjective grading). Early signs of stress are missed;
+interventions arrive after default, not before.
+
+Meanwhile the raw signals needed to PREDICT stress already exist:
+  • Daily UPI/digital transaction patterns (rural UPI adoption grew ~47% YoY
+    in FY2025; 4M+ kirana stores accept UPI),
+  • Public mandi price data (Agmarknet/e-NAM: 3,000+ mandis, daily prices,
+    open API on data.gov.in),
+  • District-level rainfall/weather data and forecasts (IMD open APIs),
+  • Digitized SHG books (NABARD's own e-Shakti covers 12 lakh+ SHGs),
+  • Seasonal/sector patterns that are well understood but never systematized.
+
+MIRA fuses these into a single, offline-first, multilingual platform:
+
+  FOR THE MICRO-ENTERPRISE: a dead-simple ledger (income/expense/savings/loan
+  entry with voice + regional language support) that gives back a 3–6 month
+  cash flow forecast, a plain-language "health signal" (Green/Amber/Red), and
+  concrete suggestions ("Feed prices are rising 12% — lock in feed purchase
+  now", "Your festival-season sales start in 6 weeks — build Rs. 8,000 buffer").
+
+  FOR THE FIELD OFFICER / BANKER: a portfolio dashboard ranking every
+  enterprise by predicted risk, with per-enterprise cash-flow forecast
+  charts, early-warning flags (missed savings, repayment gaps, transaction
+  slowdown, sector shock exposure), explainable "why is this flagged" panels,
+  and suggested interventions — turning reactive collections into proactive,
+  targeted support.
+
+  THE AI CORE: an ensemble forecasting engine (seasonal decomposition +
+  gradient-boosted trees + statistical baselines) predicting monthly net cash
+  flow 3–6 months ahead per enterprise; a composite risk score blending
+  cash-flow health, repayment behaviour, transaction-signal trends, sector
+  stress, climate exposure and market-price shocks; a rule+ML early warning
+  layer; and SHAP-style explainability so every score is transparent and
+  actionable — a hard requirement for adoption by banks and NABARD.
+
+Built as a Progressive Web App that works fully offline (IndexedDB local
+store, background sync), runs its lightweight models client-side when
+offline, uses only mock/simulated but realistically-calibrated datasets, and
+needs no sensitive personal data (no Aadhaar, no phone-number-linked UPI
+records — only aggregated transaction-pattern proxies).
+
+================================================================================
+2. PROBLEM UNDERSTANDING & WHY IT MATTERS (RESEARCH CONTEXT)
+================================================================================
+2.1 The scale of the underserved segment
+  • The SHG-Bank Linkage Programme (SHG-BLP), started by NABARD in 1992 with
+    500 groups, is now the world's largest microfinance programme: 144.22
+    lakh SHGs, 17.75 crore families, Rs. 2,09,286 crore disbursed in FY24
+    (44% YoY growth).
+  • 10,000+ FPOs are being promoted under the Central Sector Scheme with a
+    Rs. 1,000 crore Credit Guarantee Fund managed by NABSanrakshan (a NABARD
+    subsidiary). FPO studies (NAARM 2025 impact evaluation) consistently
+    flag "lack of timely financing" and weak financial records as the top
+    constraints.
+  • ~80% of Indians lack access to formal credit largely due to absent
+    credit histories (MicroSave / Grameen Credit Score project). Bihar alone
+    is building a credit database for 10 million SHG members — proof that
+    institutions want exactly the kind of data infrastructure this hackathon
+    envisions.
+
+2.2 Why current monitoring fails
+  • SHG quality assessment today = NABARD's "Panchsutra" grading (regular
+    meetings, regular savings, internal lending, timely repayment, proper
+    books) scored manually on a 70/100 threshold — a snapshot done at loan
+    time, not continuous monitoring.
+  • Field officers manage hundreds of enterprises each; visits are monthly
+    or quarterly at best. Stress builds between visits.
+  • NPA rates on SHG lending (2.05% commercial banks, ~4.7% cooperative
+    banks, FY24) look manageable in aggregate but mask localized crises
+    (drought districts, sector shocks like avian flu or feed price spikes)
+    that early warning could pre-empt.
+  • NABARD's e-Shakti project (12 lakh+ SHGs digitized, auto-grading,
+    auto-loan-application generation) proved digitization works and reduces
+    NPAs — but it digitizes RECORDS; it does not PREDICT. MIRA is the
+    natural predictive layer on top of an e-Shakti-like record base.
+
+2.3 The regulatory tailwind (why timing is perfect)
+  • RBI is explicitly pushing lenders from collateral-based to
+    CASH-FLOW-BASED lending for MSMEs (30th Standing Advisory Committee,
+    Oct 2025; Account Aggregator loans crossed Rs. 1.6 lakh crore in
+    FY2024-25 across ~1.9 crore loan accounts).
+  • New RBI co-lending framework (effective Jan 2026) enables bank+NBFC
+    partnerships targeting rural/priority sectors — these lenders need
+    exactly the risk-profiling infrastructure MIRA provides.
+  • UPI-powered digital lending initiatives (Budget 2024-25) legitimize
+    transaction-pattern-based underwriting.
+
+2.4 The data ecosystem is ready
+  • UPI: 86.7% of rural population aged 15–24 used UPI in Q1 2025; rural
+    adoption up 47% YoY; 2,163 crore transactions in Dec 2025; 4M+ kirana
+    stores accept UPI. Transaction count/frequency/counterparty-diversity
+    patterns are a validated cash-flow proxy for micro-merchants.
+  • Market prices: Agmarknet + e-NAM publish daily min/max/modal prices for
+    200+ commodities across 3,000–4,367 mandis, with an open REST API on
+    data.gov.in (CSV/JSON).
+  • Weather: IMD offers open APIs for district-wise rainfall (daily +
+    historical), 5-day district forecasts, nowcasts, and Agromet advisories.
+  • These are all non-personal, public datasets — perfectly matching the
+    constraint that the solution must not rely on sensitive personal
+    information.
+
+================================================================================
+3. KEY RESEARCH FINDINGS THAT SHAPE THE SOLUTION
+================================================================================
+F1. ML beats classical baselines for small-sample cash-flow forecasting.
+    Studies benchmarking 9 ML algorithms vs ARIMA on small firm datasets
+    found most ML methods outperform, with k-NN and gradient boosting
+    (XGBoost/LightGBM) working well even with ~33 observations — critical
+    because a micro-enterprise may have only 12–36 months of history.
+    Hybrid strategies (statistical + LSTM + XGBoost ensembles) are the
+    state of the art for SME liquidity forecasting.
+    → DESIGN CHOICE: ensemble of (a) seasonal-naive / exponential-smoothing
+      baselines, (b) LightGBM with engineered features, (c) optional
+      lightweight neural model server-side. Never a single black box.
+
+F2. Early-warning literature converges on gradient boosting + anomaly
+    detection + SHAP explainability; unsupervised methods (Isolation
+    Forest, autoencoders) achieve ~85% recall for risk-breach prediction
+    on real-time digital signals.
+    → DESIGN CHOICE: two-layer EWS = interpretable rule triggers (domain
+      rules field officers already trust, e.g. Panchsutra violations) +
+      ML anomaly layer on transaction/cash-flow patterns, with SHAP-style
+      reason codes on every alert.
+
+F3. UPI transaction-pattern features (volume, frequency, counterparty
+    diversity, day-of-week distribution, credit-to-debit ratio) are
+    accepted cash-flow proxies in Indian fintech underwriting, and can be
+    used as AGGREGATED, ANONYMIZED indices — no personal data needed.
+    → DESIGN CHOICE: simulate a "Digital Activity Index" per enterprise
+      (daily txn count, avg ticket, inflow/outflow ratio, unique-payer
+      proxy) as a first-class model input.
+
+F4. Sector economics are highly heterogeneous:
+    • Dairy: daily revenue (unlike crop seasonality) but margins squeezed
+      by fodder/feed price swings; lean vs flush season (summer milk yield
+      drops 15–30%); disease shocks (FMD, lumpy skin).
+    • Poultry: maize + soymeal ≈ 65–70% of cost; extreme feed price
+      volatility 2023–25; heat-wave mortality; avian-flu demand shocks;
+      short 6-week broiler cycles → cash flow is high-frequency.
+    • Food processing: raw-material seasonality, FSSAI/working-capital
+      cycles, festival demand spikes.
+    • Handicrafts: long receivable cycles, order lumpiness, festival/
+      export seasonality, exhibition-driven income spikes.
+    • Rural retail (kirana): steady but monsoon-dependent footfall,
+      harvest-season liquidity surges in farm belts, credit-sales (udhaar)
+      stress.
+    → DESIGN CHOICE: sector templates with distinct seasonality curves,
+      cost structures, risk factors and recommendation libraries.
+
+F5. Offline-first PWA is the proven pattern for rural India (2G/3G still
+    dominant in many belts): service worker + IndexedDB as local source of
+    truth + background sync queue. 95% faster repeat loads, 100% data
+    persistence offline.
+    → DESIGN CHOICE: PWA (not native app) — installable, works offline,
+      one codebase, runs on the Rs. 6,000 Android phones field officers
+      and SHG members actually own; simple on-device scoring fallback so
+      risk signals work even with zero connectivity.
+
+F6. NABARD's own e-Shakti taught the lessons: data entry burden must be
+    minimal, grading must be automatic, and the system must generate
+    banker-ready outputs (auto loan applications). Its gap: no forecasting,
+    no market/climate integration, no proactive alerts.
+    → DESIGN CHOICE: MIRA deliberately positions as "e-Shakti++" —
+      the predictive intelligence layer NABARD's existing digital public
+      infrastructure is missing.
+
+================================================================================
+4. SOLUTION OVERVIEW — WHAT CASHMITRA IS
+================================================================================
+One platform, two faces, three engines.
+
+TWO FACES (interfaces):
+  A) Udyami (Enterprise) App — for the SHG treasurer / FPO manager /
+     individual entrepreneur:
+       - 30-second daily entry: income, expense, savings deposit, loan
+         repayment (big buttons, icons, voice input, local language).
+       - "Health Card": Green/Amber/Red status with one-line reason.
+       - Cash-flow forecast: "Next 3 months you will likely earn Rs. X,
+         spend Rs. Y" as a simple bar chart.
+       - Alerts & advice: push/SMS-style cards, each with ONE action.
+  B) Adhikari (Field Officer / Banker) Dashboard:
+       - Portfolio heat-map: all enterprises sorted by risk score, filter
+         by village/sector/risk level.
+       - Enterprise 360° profile: financials, forecast chart with
+         confidence band, risk drivers (SHAP-style), alert timeline.
+       - Risk panel: active early-warning signals across portfolio
+         (e.g., "7 poultry units in Block X exposed to 18% feed price
+         rise"), intervention tracker.
+       - Reports: bankable cash-flow statement + risk profile per
+         enterprise (the "credit passport" a bank can underwrite from).
+
+THREE ENGINES (the AI core):
+  1) FORECAST ENGINE — predicts monthly net cash flow, income and expenses
+     3–6 months ahead per enterprise, with uncertainty bands.
+  2) RISK ENGINE — composite 0–100 MIRA Risk Score updated daily,
+     decomposed into 5 sub-scores: Cash-Flow Health, Repayment Discipline,
+     Digital Activity Trend, Market/Sector Stress, Climate Exposure.
+  3) EARLY-WARNING ENGINE — rule triggers + anomaly detection that fire
+     specific, named signals (see §7.3) mapped to recommended actions.
+
+DATA IN (all mock/simulated for the prototype, schema-compatible with real
+sources for production):
+  • Enterprise ledger (savings, loans, repayments, income, expenses)
+  • Digital Activity Index (simulated UPI-pattern aggregates)
+  • Mandi prices (simulated Agmarknet-schema commodity price series)
+  • Weather (simulated IMD-schema district rainfall/temperature + forecast)
+  • Sector calendars (festival demand, crop cycles, lean/flush seasons)
+
+================================================================================
+5. SYSTEM ARCHITECTURE
+================================================================================
+
+  ┌─────────────────────────────────────────────────────────────────┐
+  │                        CLIENT (PWA)                             │
+  │  React + Service Worker + IndexedDB (Dexie)                     │
+  │  • Udyami app + Adhikari dashboard (role-based)                 │
+  │  • Offline ledger entry → local store → sync queue              │
+  │  • On-device fallback scoring (rule-based EWS runs locally)     │
+  │  • i18n: English / Hindi (+ extensible)                         │
+  └───────────────▲───────────────────────────▲─────────────────────┘
+                  │  background sync (JSON)   │
+  ┌───────────────┴───────────────────────────┴─────────────────────┐
+  │                      API LAYER (FastAPI)                        │
+  │  • Auth (role: enterprise / field officer)                      │
+  │  • Ledger CRUD, sync/conflict resolution (last-write-wins +     │
+  │    server timestamps)                                           │
+  │  • Forecast & risk endpoints, alert feed, reports               │
+  └───────────────▲───────────────────────────▲─────────────────────┘
+                  │                           │
+  ┌───────────────┴─────────────┐ ┌───────────┴─────────────────────┐
+  │      ML SERVICE (Python)    │ │      DATA HUB                   │
+  │  • Feature pipeline         │ │  • SQLite/Postgres store        │
+  │  • Forecast ensemble        │ │  • Mock data generators:        │
+  │    (baseline + LightGBM)    │ │    - enterprise ledgers         │
+  │  • Risk scorer + SHAP       │ │    - UPI-proxy index            │
+  │  • Anomaly detector         │ │    - Agmarknet-schema prices    │
+  │  • Recommendation mapper    │ │    - IMD-schema weather         │
+  │  • Nightly batch + on-      │ │  • (Prod: swap generators for   │
+  │    demand scoring           │ │    real data.gov.in / IMD APIs) │
+  └─────────────────────────────┘ └─────────────────────────────────┘
+
+Key architectural decisions:
+  • PWA over native: installable, offline-capable, single codebase,
+    zero-friction demo for judges (just a URL).
+  • Mock data generators are SCHEMA-FAITHFUL to the real public APIs
+    (Agmarknet JSON fields, IMD district rainfall format) — so switching
+    to live data is a config change, not a rebuild. This is a major
+    credibility point for the "digital public good" story.
+  • Models are retrained/rescored in a nightly batch (cheap), with
+    on-demand rescoring when new ledger data syncs.
+  • Everything an officer needs for a field visit is cached locally
+    before they leave network coverage ("Download my beat" button).
+
+================================================================================
+6. DATA STRATEGY (MULTI-SOURCE INTEGRATION + MOCK DATASET DESIGN)
+================================================================================
+6.1 Entity model
+  Enterprise {id, name, type: SHG|FPO|Individual, sector: dairy|poultry|
+    food_processing|handicrafts|rural_retail, village, district, state,
+    members_count, established_date, linked_bank, loan_accounts[]}
+  LedgerEntry {enterprise_id, date, kind: income|expense|savings_deposit|
+    savings_withdrawal|loan_disbursement|loan_repayment, amount, category,
+    channel: cash|upi|bank, note}
+  DigitalActivityDay {enterprise_id, date, txn_count, txn_value_index,
+    inflow_outflow_ratio, unique_payer_index, weekend_share}
+  CommodityPrice {commodity, mandi, district, date, min, max, modal}   [Agmarknet schema]
+  WeatherDay {district, date, rainfall_mm, rainfall_normal_mm, tmax, tmin,
+    forecast_5d[]}                                                     [IMD schema]
+  Alert {enterprise_id, date, signal_code, severity, message, action,
+    status: open|acknowledged|resolved}
+  Score {enterprise_id, date, risk_score, subscores{...}, forecast[6],
+    forecast_low[6], forecast_high[6], top_drivers[]}
+
+6.2 Mock dataset design (the demo must feel REAL)
+  Generate 24–36 months of daily history for 50–80 enterprises across the
+  5 sectors and 3–4 districts, engineered so that the demo tells stories:
+  • Base income = sector seasonality curve × enterprise size × trend
+      - Dairy: flush season Nov–Feb (+20%), lean Apr–Jun (−20%), daily sales.
+      - Poultry: 6-week batch cycles → lumpy income; feed cost = f(maize,
+        soymeal price series).
+      - Handicrafts: Diwali/Christmas/wedding-season spikes, long gaps.
+      - Rural retail: steady + harvest-season bumps + monsoon dips.
+      - Food processing: raw material cost follows mandi prices; festival
+        demand spikes.
+  • Inject realistic shocks into SOME enterprises (these become the demo's
+    "Red" cases): feed price spike, deficient-rainfall district, member
+    illness (expense spike + income drop), repayment slippage pattern,
+    gradual digital-activity decline (leading indicator!).
+  • Include healthy enterprises (stable "Green" majority) and borderline
+    "Amber" cases (single weak signal) — so the dashboard shows a credible
+    distribution, not uniform doom.
+  • Weather series: 2 normal districts, 1 drought-year district, 1 excess-
+    rainfall/flood-event district.
+  • Price series: maize/soymeal with 2024-style volatility; milk procurement
+    price steps; vegetable price seasonality.
+  Ground-truth labels for validation: an enterprise is "stressed at month t"
+  if (net cash flow < 0 for 2 of next 3 months) OR (missed repayment in
+  next 3 months) — lets us report honest precision/recall for the EWS.
+
+6.3 Production data mapping (documented, not built, for hackathon)
+  Ledger        ← e-Shakti / NRLM LokOS / bank statements via Account
+                  Aggregator (consent-based)
+  Digital proxy ← merchant UPI aggregates via NPCI/PSP partnerships
+                  (aggregated, anonymized indices only)
+  Prices        ← data.gov.in Agmarknet API (live, free, open)
+  Weather       ← IMD public APIs (district rainfall, 5-day forecast,
+                  Agromet advisories)
+  Sector intel  ← NABARD district potential-linked plans, e-NAM demand data
+
+================================================================================
+7. AI/ML MODELLING APPROACH
+================================================================================
+7.1 CASH FLOW FORECASTING ENGINE (3–6 month horizon)
+  Target: monthly net cash flow (and separately income & expense) for
+  months t+1 … t+6, with P10/P50/P90 bands.
+
+  Feature groups (per enterprise-month):
+    • Lags & rolling stats: net CF lags 1–12, rolling mean/std 3/6/12m,
+      trend slope, month-of-year, festival-proximity flags.
+    • Behavioural: savings regularity (entropy of deposit gaps), repayment
+      on-time rate, expense/income ratio, cash vs digital share.
+    • Digital Activity Index: 30/90-day txn-count trend, inflow/outflow
+      ratio drift, payer-diversity trend.
+    • Market: sector-relevant commodity price level + 3-month momentum
+      (e.g., poultry → maize+soymeal cost index; dairy → fodder index &
+      milk procurement price).
+    • Climate: district rainfall deviation from normal (current + monsoon
+      cumulative), heat-stress days, 5-day forecast severity.
+    • Sector calendar: lean/flush flag, batch-cycle phase, festival window.
+
+  Model ensemble (pragmatic, small-data-appropriate — per F1):
+    M0 Seasonal-naive & Holt-Winters — honest baselines, also the
+       on-device fallback.
+    M1 LightGBM regressors (one per horizon h=1..6, quantile objectives
+       for bands) trained ACROSS enterprises (pooled panel) so young
+       enterprises borrow strength from sector peers — solves cold start.
+    M2 (stretch) Global N-BEATS/LSTM — only if time permits; not required
+       for a winning demo.
+    Final = weighted blend, weights from backtest (expanding-window CV).
+
+  Evaluation: MAPE / WAPE per horizon vs M0 baseline; pinball loss for
+  quantiles; report per-sector. Honest target: beat seasonal-naive by
+  25–40% WAPE on simulated data — and SAY SO in the demo (judges trust
+  teams who show baselines).
+
+7.2 COMPOSITE RISK SCORING ENGINE
+  MIRA Risk Score (0–100, higher = safer) = weighted blend of five
+  sub-scores, each 0–100, each fully explainable:
+    S1 Cash-Flow Health (30%): forecast net-CF trajectory, months-of-
+       runway (liquid savings ÷ avg monthly deficit), volatility.
+    S2 Repayment Discipline (25%): on-time ratio, days-past-due trend,
+       Panchsutra-style savings regularity (deliberately mirrors NABARD
+       grading so bankers recognize it).
+    S3 Digital Activity Trend (15%): 90-day slope of transaction index —
+       research shows activity decline LEADS income decline.
+    S4 Market/Sector Stress (15%): sector cost-price squeeze index from
+       mandi data (input price momentum minus output price momentum).
+    S5 Climate Exposure (15%): district rainfall deficit/excess, heat
+       events, forecast shocks × sector climate-sensitivity weight.
+  Bands: 70–100 Green (healthy), 45–69 Amber (watch), 0–44 Red (act now).
+  A supervised LightGBM classifier (predicting the §6.2 stress label at
+  3-month horizon) is trained as well; its calibrated probability is shown
+  as "Stress probability (3m): 68%" alongside the transparent score —
+  transparent score for trust, ML probability for accuracy, SHAP values
+  reconciling the two.
+
+7.3 EARLY WARNING SIGNALS (named, specific, actionable)
+  Rule layer (interpretable, runs offline on device too):
+    EWS-01 SAVINGS_BREAK     : no savings deposit in 2 consecutive periods
+    EWS-02 REPAY_SLIP        : repayment missed or partial ≥1 cycle
+    EWS-03 CF_DETERIORATION  : forecast net CF negative for ≥2 of next 3 months
+    EWS-04 RUNWAY_LOW        : savings buffer < 1 month of avg expenses
+    EWS-05 TXN_SLOWDOWN      : Digital Activity Index ↓ >30% vs 90-day norm
+    EWS-06 INPUT_PRICE_SHOCK : sector input cost index ↑ >15% in 60 days
+    EWS-07 OUTPUT_PRICE_DROP : sector output price ↓ >12% in 60 days
+    EWS-08 CLIMATE_ALERT     : rainfall deficit >40% of normal in growing
+                               window / heatwave forecast / flood event
+    EWS-09 EXPENSE_SPIKE     : expense anomaly (>2.5σ from personal norm)
+    EWS-10 CONCENTRATION     : >70% income from single buyer/source (FPO/
+                               handicrafts risk)
+  ML layer: Isolation Forest over the feature vector flags "unusual
+  pattern" cases rules can't name (per F2, ~85% recall achievable);
+  surfaced as EWS-99 ANOMALY with top deviating features listed.
+  Every alert carries: severity, plain-language cause, ONE recommended
+  action, and who should act (enterprise vs officer).
+
+7.4 EXPLAINABILITY & RECOMMENDATIONS
+  • SHAP values on both forecaster and stress classifier → "Top 3 reasons"
+    chips on every score/alert (e.g., "▲ Feed cost +18%", "▼ Savings
+    regularity", "▲ Rainfall deficit 45%").
+  • Recommendation mapper: (signal × sector) → curated action library
+    written in simple language, e.g.:
+      Poultry + EWS-06 → "Feed prices up 18%. Consider: buy 3 weeks feed
+      now; talk to FPO for bulk purchase; reduce next batch size by 10%."
+      Dairy + EWS-08 (heat) → "Heatwave forecast next week. Milk yield may
+      drop 15%. Ensure shade + water; hold off new loan EMI commitments."
+      Any + EWS-03 → officer action: "Schedule visit; consider EMI
+      restructuring window before default."
+  • This closes the loop the problem statement demands: prediction →
+    warning → SIMPLE ACTIONABLE INSIGHT.
+
+================================================================================
+8. SECTOR-SPECIFIC RISK MODELS
+================================================================================
+Each sector gets: a seasonality template, a cost-structure map, tracked
+commodities, climate sensitivity weights, and a tailored action library.
+
+  DAIRY
+   • Income: daily; flush (Nov–Feb) vs lean (Apr–Jun) ±20–30%.
+   • Tracked prices: fodder/feed index, milk procurement price.
+   • Risks: feed inflation, heat stress (yield ↓), disease outbreak,
+     dairy-cooperative payment delays.
+   • Climate weight: HIGH (heat, fodder availability follows rainfall).
+
+  POULTRY
+   • Income: 6–8 week batch cycles (broiler) / daily (layer eggs).
+   • Tracked prices: maize, soymeal (≈65–70% of cost), egg/broiler NECC-
+     style rates.
+   • Risks: feed price spikes (2023–25 volatility), heatwave mortality,
+     avian-flu demand collapse, cold-chain gaps.
+   • Climate weight: HIGH (heat mortality).
+
+  FOOD PROCESSING
+   • Income: festival-skewed; raw material cost follows harvest cycles.
+   • Tracked prices: sector raw materials (oilseeds, pulses, fruits/veg).
+   • Risks: raw-material seasonality, working-capital cycles, spoilage,
+     FSSAI compliance costs.
+   • Climate weight: MEDIUM (raw material supply).
+
+  HANDICRAFTS
+   • Income: lumpy orders; Diwali/Christmas/wedding/exhibition spikes;
+     long receivables.
+   • Tracked signals: order pipeline (entered), festival calendar.
+   • Risks: demand concentration (EWS-10), receivable delays, raw material
+     (yarn, wood, metal) costs, e-commerce competition.
+   • Climate weight: LOW-MEDIUM (monsoon disrupts production/logistics).
+
+  RURAL RETAIL (KIRANA)
+   • Income: steady daily + harvest-season surges + monsoon dips.
+   • Tracked signals: local agri income proxy (mandi arrivals), UPI index.
+   • Risks: udhaar (credit sales) stress, stock dead-capital, quick-
+     commerce encroachment, festival inventory misjudgment.
+   • Climate weight: MEDIUM (farm-income pass-through).
+
+Sector templates drive: (a) forecast features, (b) S4/S5 sub-score inputs,
+(c) which EWS thresholds apply, (d) recommendation text.
+
+================================================================================
+9. CLIMATE & MARKET RISK INTEGRATION
+================================================================================
+  • District-level rainfall deviation (actual vs IMD normal) computed
+    weekly; monsoon cumulative deficit feeds S5 and EWS-08.
+  • Heat events: consecutive days tmax > sector threshold (poultry 38°C,
+    dairy 40°C) → yield/mortality risk flags.
+  • 5-day forecast severity → PROACTIVE alerts (before the shock, which is
+    the whole point of "early" warning).
+  • Commodity price momentum: 30/60/90-day slopes on modal prices from
+    Agmarknet-schema data; cost-price squeeze index per sector = input
+    momentum − output momentum.
+  • Local market disruption proxy: mandi arrival volumes anomaly + digital
+    activity index of retail enterprises in same block (a village-economy
+    pulse — unique feature, judges will love the "block heat-map").
+  • Scenario view for officers: "What if rainfall is 30% deficient?" —
+    forecast re-run with shocked climate features (simple, powerful demo).
+
+================================================================================
+10. PRODUCT DESIGN — TWO PERSONAS, TWO EXPERIENCES
+================================================================================
+10.1 UDYAMI (ENTERPRISE) APP — design principles: one screen one job,
+     icons over text, numbers in Indian format, voice-first optional.
+  Screens:
+   1. Home / Health Card: big Green/Amber/Red circle + one-line reason +
+      savings balance + next EMI date.
+   2. Add Entry: 4 big buttons (Income / Expense / Savings / Loan) →
+      amount keypad → category icons → done. Target: <30 seconds.
+   3. My Forecast: 6-month bar chart (income vs expense), plain-language
+      summary ("Tight months ahead: Aug, Sep").
+   4. Alerts & Advice: card stack, each with one action button
+      ("Mark done" / "Ask officer").
+   5. My Loan: outstanding, EMI schedule, on-time streak (gamified badge —
+      builds the repayment-history story for future credit).
+
+10.2 ADHIKARI (FIELD OFFICER) DASHBOARD — desktop + mobile PWA.
+  Screens:
+   1. Portfolio Overview: KPI tiles (total enterprises, Red/Amber/Green
+      counts, alerts today, avg risk score trend), risk distribution
+      chart, sector × risk matrix, village/block heat-map.
+   2. Enterprise List: sortable/filterable table (risk score, trend arrow,
+      last entry date, active alerts, sector, village) + search.
+   3. Enterprise 360°: profile, ledger timeline, forecast chart with
+      confidence band, risk score gauge + 5 sub-score bars + SHAP reason
+      chips, alert history, intervention log, "Generate Credit Report"
+      button (PDF: cash-flow statement + risk profile → the bankable
+      "credit passport").
+   4. Risk Panel: all active alerts across portfolio, grouped by signal
+      type; bulk actions ("7 poultry units affected by feed spike →
+      schedule group advisory").
+   5. Scenario/What-if: apply climate or price shock, watch portfolio
+      re-rank.
+
+================================================================================
+11. OFFLINE-FIRST & LOW-NETWORK DESIGN
+================================================================================
+  • PWA with service worker: app shell cached (cache-first), API data
+    network-first with IndexedDB fallback.
+  • IndexedDB (via Dexie.js) = client source of truth for ledger entries;
+    every write goes local first, queued for background sync.
+  • Sync protocol: append-only ledger events with client UUIDs + timestamps
+    → idempotent server merge; conflicts resolved last-write-wins with
+    officer-visible audit trail.
+  • On-device intelligence when offline: rule-layer EWS (§7.3) and the
+    seasonal-naive forecast baseline run in JS locally, so the Health Card
+    and basic alerts NEVER require network. Full ML scores refresh on sync.
+  • "Download my beat": officer pre-caches full profiles of their
+    enterprises before field travel.
+  • Payload discipline: JSON deltas only, gzip, <50KB typical sync;
+    UI assets <2MB total; works on 2G.
+  • SMS fallback (documented for production): critical Red alerts via SMS.
+
+================================================================================
+12. MULTILINGUAL & ACCESSIBILITY DESIGN
+================================================================================
+  • i18n from day one (react-i18next): English + Hindi shipped in the
+    prototype; string files structured for easy addition of Marathi,
+    Telugu, Tamil, Bengali, Odia.
+  • Icon-first UI, minimal text, numerals with Indian digit grouping.
+  • Voice entry (Web Speech API, hi-IN) for amount/category — optional
+    but a strong demo moment.
+  • Low-literacy support: color+icon coding (Green/Amber/Red universally
+    understood), audio playback of alerts (TTS) as stretch goal.
+
+================================================================================
+13. PRIVACY, ETHICS & DATA PROTECTION
+================================================================================
+  • No Aadhaar, no PAN, no phone-number-linked transaction records; UPI
+    signals only as AGGREGATED per-enterprise daily indices (count/value
+    index) — compliant with the problem-statement constraint and DPDP Act
+    2023 spirit.
+  • Consent-first framing: enterprise owns its ledger; officer sees scores
+    & aggregates; "Generate Credit Report" is enterprise-triggered/
+    consented.
+  • Explainability everywhere (no black-box denials) — aligns with RBI
+    digital-lending guidelines direction.
+  • Bias guardrails: score never uses gender/caste/religion; sector and
+    geography used only via economic variables; document this in the
+    model card.
+  • Model card + data dictionary shipped in repo (digital-public-good
+    hygiene; strengthens NABARD's DPG value-creation goal).
+
+================================================================================
+14. TECHNOLOGY STACK (HACKATHON PROTOTYPE)
+================================================================================
+  Frontend : React 18 + Vite, TypeScript, Tailwind CSS, Recharts,
+             react-i18next, Dexie (IndexedDB), Workbox (service worker,
+             background sync), installable PWA manifest.
+  Backend  : Python FastAPI, SQLite (file-based — zero-setup, perfect for
+             demo; Postgres-ready via SQLAlchemy), Pydantic schemas.
+  ML       : pandas, numpy, scikit-learn, LightGBM, SHAP, statsmodels
+             (Holt-Winters); joblib model artifacts; nightly batch script
+             + on-demand endpoint.
+  Data     : Python mock-data generators (seeded, reproducible),
+             schema-faithful to Agmarknet/IMD/e-Shakti structures.
+  Reports  : server-side PDF (reportlab/weasyprint) for the Credit Passport.
+  Auth     : simple JWT with role claim (enterprise/officer) — demo-grade.
+  Deploy   : runs fully locally (uvicorn + static build) — no cloud
+             dependency, honouring the offline/low-network constraint even
+             in the demo; optionally deployable to any host.
+
+================================================================================
+15. IMPLEMENTATION ROADMAP (HACKATHON BUILD PLAN)
+================================================================================
+  Phase 0 — Foundation (this repo)
+    ✔ Research + solution design (this document)
+  Phase 1 — Data & ML core
+    • Mock data generators (enterprises, ledgers, UPI index, prices,
+      weather) with engineered demo storylines
+    • Feature pipeline → forecast ensemble → risk scorer → EWS rules →
+      SHAP reasons → recommendation mapper
+    • Backtest report (vs baseline) saved as artifact
+  Phase 2 — Backend API
+    • FastAPI: auth, ledger CRUD + sync, scores/forecast/alerts endpoints,
+      credit-report PDF
+  Phase 3 — Frontend
+    • Udyami app (5 screens) + Adhikari dashboard (5 screens)
+    • PWA/offline layer (service worker, IndexedDB, sync queue)
+    • i18n EN/HI, charts, risk visualisations
+  Phase 4 — Polish & pitch
+    • Demo script with 3 storyline enterprises (one Green, one Amber
+      catching an early warning, one Red rescue story)
+    • README, architecture diagram, model card, screenshots
+
+================================================================================
+16. ALIGNMENT WITH NABARD'S VALUE-CREATION GOALS
+================================================================================
+  1. Enhanced credit flow: the Credit Passport (forecast + explainable
+     risk profile) is exactly the appraisal artifact banks need for
+     cash-flow-based lending (RBI's stated direction); mirrors Panchsutra
+     so bankers trust it on sight.
+  2. Credit-led rural development: on-time streaks + verified ledger
+     history let grant-supported enterprises graduate to institutional
+     credit — the platform literally manufactures repayment-capacity
+     evidence.
+  3. Digital Public Good: open schemas mapped to existing public data
+     infrastructure (Agmarknet, IMD, e-Shakti/LokOS), model card, no
+     proprietary data lock-in — designed as common infrastructure, not a
+     product silo.
+  4. Better beneficiary outcomes: every prediction ends in a simple,
+     sector-specific, actionable suggestion in the user's language —
+     insight that reaches the enterprise, not just the institution.
+
+================================================================================
+17. WHY THIS SOLUTION WINS (DIFFERENTIATORS)
+================================================================================
+  1. PREDICTIVE, not just digital: e-Shakti/LokOS digitize records;
+     MIRA forecasts and warns — the exact gap the problem names.
+  2. PROACTIVE climate/market fusion: alerts fire BEFORE the shock hits
+     cash flow (5-day IMD forecasts, price momentum), not after.
+  3. EXPLAINABLE by construction: transparent sub-scores + SHAP reasons +
+     Panchsutra-aligned metrics → institutional trust, regulatory fit.
+  4. HONEST ML: baselines shown, backtests reported, small-data-
+     appropriate models — credible to technical judges.
+  5. TRULY offline-first: health signal and alerts work with zero network
+     (on-device rules + baseline forecast) — most teams will only cache UI.
+  6. TWO-SIDED value: enterprise gets advice, officer gets triage, bank
+     gets a credit passport — one data entry serves three stakeholders.
+  7. PRODUCTION-CREDIBLE: mock data is schema-faithful to real public
+     APIs; the path from prototype to pilot is a config change plus
+     partnerships, and the document maps it (§6.3, §18).
+
+================================================================================
+18. FUTURE SCALE-UP PATH (BEYOND THE HACKATHON)
+================================================================================
+  • Data: integrate live Agmarknet + IMD APIs; e-Shakti/LokOS ledger sync;
+    Account Aggregator consent flows for bank-statement ingestion;
+    NPCI/PSP partnerships for genuine aggregated UPI merchant indices.
+  • Models: pooled national training with federated/district partitions;
+    add satellite vegetation indices (NDVI) for crop-linked sectors;
+    survival models for time-to-stress.
+  • Channels: WhatsApp bot + IVR + SMS alerts; native Android wrapper.
+  • Institutional: pilot with 2–3 NABARD DDMs / RRBs; co-lending risk
+    feeds under the 2026 RBI framework; NABSanrakshan guarantee-pricing
+    inputs.
+  • Governance: open-source core, DPG registration, model audit cadence.
+
+================================================================================
+19. REFERENCES & RESEARCH SOURCES
+================================================================================
+ NABARD & Government
+  • NABARD SHG-Bank Linkage Programme highlights — nabard.org/content1.aspx?id=652
+  • NABARD Status of Microfinance in India reports; SHG-BLP impact studies
+  • NABARD e-Shakti pilot documentation — nabard.org (E-Shakti PDFs)
+  • NABSanrakshan Credit Guarantee Scheme for FPOs — nabard.org/pdf/cgsfpo.pdf
+  • NAARM (2025) Impact Evaluation of NABARD-promoted FPOs
+  • PIB: "UPI completes 10 years" — pib.gov.in PRID 2257087
+  • PIB: Agmarknet & e-NAM real-time mandi prices — pib.gov.in PRID 2204750
+  • PIB: MSME credit access measures — pib.gov.in PRID 2110404
+  • data.gov.in: Current daily mandi prices (open API)
+  • IMD open APIs — api.imd.gov.in / mausam.imd.gov.in (district rainfall,
+    forecasts, Agromet advisories)
+ Regulatory & Industry
+  • RBI 30th Standing Advisory Committee on MSME credit (Oct 2025) —
+    cash-flow-based lending push; Account Aggregator lending volumes
+  • RBI Co-Lending Arrangements framework (effective Jan 2026)
+  • MicroSave: Grameen Credit Score project (Bihar, 10M SHG members)
+  • Rural UPI adoption analyses (The Secretariat; IIMB UPI usage studies)
+ Academic / Technical
+  • "Application of ML Algorithms to Free Cash Flow Estimation"
+    (Procedia CS, 2023) — ML vs ARIMA on small samples
+  • IEEE (2025): Literature Review — Optimizing Cash Flow Forecasting
+    with ML in SMEs
+  • "ML-Enabled Early Warning System for Financial Distress Using
+    Real-Time Digital Signals" — arXiv:2510.22287
+  • Cash Flow Forecasting for Self-Employed Workers (Computational
+    Economics, 2024)
+  • AI-BAAM: Bank Statement Analytics for MSME Credit Scoring —
+    arXiv:2510.16066
+  • LSTM/XGBoost hybrid liquidity forecasting (Wiley ISAF, 2024)
+ Sector economics
+  • Farmonaut / Benison Media / Vprint Infotech: dairy & poultry cost
+    structures, feed price volatility 2023–25
+  • mooPay: "Dairy as an Asset Class in Rural Lending"
+ Engineering
+  • LogRocket (2025): Offline-first frontend apps — IndexedDB patterns
+  • PWA offline-sync patterns (service worker + Dexie + Background Sync)
+
+================================================================================
+END OF SOLUTION DOCUMENT — Ready for implementation (Phase 1 next).
+================================================================================

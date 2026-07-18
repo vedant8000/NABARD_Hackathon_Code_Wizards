@@ -1,0 +1,21 @@
+# environments & dependencies
+**/.venv/
+**/node_modules/
+**/__pycache__/
+*.pyc
+
+# builds & runtime artifacts
+**/dist/
+*.db
+mira/backend/data/plots/
+
+# secrets
+.env
+**/.env
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# local tooling config
+.claude/

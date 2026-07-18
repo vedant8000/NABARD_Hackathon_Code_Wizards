@@ -1,0 +1,65 @@
+id,name,type,sector,village,district,size_factor,established_date,members_count,loan_principal,shock
+1,Savitri Dugdh Dairy,FPO,dairy,Jamunia,Betulpur,1.53,2020-03-24,118,100000,drought
+2,Meera Dugdh Dairy,Individual,dairy,Piparia,Nadiya,1.44,2019-03-23,1,60000,none
+3,Radha Dugdh SHG,SHG,dairy,Chandpur,Sundarganj,1.77,2022-12-28,15,250000,none
+4,Kamla Dugdh Dairy,FPO,dairy,Nayagaon,Nadiya,1.54,2020-12-04,63,250000,none
+5,Sunita Dugdh Dairy,Individual,dairy,Hariharpur,Sundarganj,1.04,2021-03-27,1,60000,none
+6,Geeta Dugdh SHG,SHG,dairy,Madhopur,Nadiya,1.37,2018-11-20,12,250000,none
+7,Anita Dugdh Dairy,FPO,dairy,Gopalpura,Sundarganj,1.13,2021-03-27,80,60000,borderline
+8,Rekha Dugdh Dairy,Individual,dairy,Piparia,Nadiya,0.68,2020-09-20,1,250000,none
+9,Pushpa Dugdh SHG,SHG,dairy,Khairwada,Betulpur,1.36,2019-05-18,9,250000,drought
+10,Ramesh Dugdh Dairy,FPO,dairy,Nayagaon,Nadiya,1.03,2023-02-13,214,100000,none
+11,Suresh Dugdh Dairy,Individual,dairy,Hariharpur,Sundarganj,1.53,2019-01-20,1,250000,none
+12,Mahesh Dugdh SHG,SHG,dairy,Madhopur,Nadiya,1.16,2022-06-30,12,60000,none
+13,Dinesh Dugdh Dairy,FPO,dairy,Gopalpura,Sundarganj,0.79,2019-10-16,162,250000,none
+14,Kailash Murgi Poultry Farm,Individual,poultry,Lodhipura,Betulpur,1.76,2019-10-14,1,100000,feed_spike
+15,Santosh Murgi SHG,SHG,poultry,Amarpur,Rampur,1.04,2021-11-06,8,100000,feed_spike
+16,Prakash Murgi Poultry Farm,FPO,poultry,Khairwada,Betulpur,0.83,2021-03-04,63,150000,feed_spike
+17,Mukesh Murgi Poultry Farm,Individual,poultry,Devgaon,Rampur,0.87,2021-02-09,1,150000,feed_spike
+18,Rajesh Murgi SHG,SHG,poultry,Jamunia,Betulpur,1.12,2020-02-26,9,250000,feed_spike
+19,Ganesh Murgi Poultry Farm,FPO,poultry,Bhilai Kalan,Rampur,1.44,2022-12-22,96,250000,borderline
+20,Lakshmi Murgi Poultry Farm,Individual,poultry,Lodhipura,Betulpur,1.57,2019-05-09,1,250000,borderline
+21,Savitri Murgi SHG,SHG,poultry,Amarpur,Rampur,0.95,2021-07-18,10,150000,none
+22,Meera Murgi Poultry Farm,FPO,poultry,Khairwada,Betulpur,0.77,2019-05-09,75,250000,none
+23,Radha Murgi Poultry Farm,Individual,poultry,Devgaon,Rampur,1.54,2023-06-02,1,250000,none
+24,Kamla Murgi SHG,SHG,poultry,Jamunia,Betulpur,1.45,2020-03-06,10,250000,idiosyncratic
+25,Sunita Murgi Poultry Farm,FPO,poultry,Bhilai Kalan,Rampur,1.15,2020-12-17,142,60000,idiosyncratic
+26,Geeta Murgi Poultry Farm,Individual,poultry,Lodhipura,Betulpur,0.74,2022-10-07,1,100000,borderline
+27,Anita Swad SHG,SHG,food_processing,Madhopur,Nadiya,1.17,2020-02-28,16,150000,none
+28,Rekha Swad Food Works,FPO,food_processing,Gopalpura,Sundarganj,1.52,2020-08-15,154,150000,none
+29,Pushpa Swad Food Works,Individual,food_processing,Piparia,Nadiya,1.27,2020-09-22,1,250000,none
+30,Ramesh Swad SHG,SHG,food_processing,Chandpur,Sundarganj,0.64,2021-12-15,11,100000,none
+31,Suresh Swad Food Works,FPO,food_processing,Nayagaon,Nadiya,0.86,2022-02-03,113,250000,none
+32,Mahesh Swad Food Works,Individual,food_processing,Hariharpur,Sundarganj,0.88,2019-04-01,1,250000,none
+33,Dinesh Swad SHG,SHG,food_processing,Madhopur,Nadiya,0.94,2023-03-03,17,100000,none
+34,Kailash Swad Food Works,FPO,food_processing,Gopalpura,Sundarganj,1.39,2022-10-31,140,150000,none
+35,Santosh Swad Food Works,Individual,food_processing,Piparia,Nadiya,1.4,2019-08-04,1,100000,none
+36,Prakash Swad SHG,SHG,food_processing,Chandpur,Sundarganj,1.58,2021-06-14,11,60000,none
+37,Mukesh Swad Food Works,FPO,food_processing,Nayagaon,Nadiya,0.63,2022-12-06,56,250000,idiosyncratic
+38,Rajesh Swad Food Works,Individual,food_processing,Hariharpur,Sundarganj,1.15,2019-11-23,1,150000,none
+39,Ganesh Swad SHG,SHG,food_processing,Madhopur,Nadiya,1.2,2022-08-29,17,60000,borderline
+40,Lakshmi Kala Handicrafts,FPO,handicrafts,Bhilai Kalan,Rampur,1.44,2021-01-04,120,60000,none
+41,Savitri Kala Handicrafts,Individual,handicrafts,Lodhipura,Betulpur,0.96,2021-07-30,1,150000,borderline
+42,Meera Kala SHG,SHG,handicrafts,Amarpur,Rampur,1.03,2020-05-07,17,60000,none
+43,Radha Kala Handicrafts,FPO,handicrafts,Khairwada,Betulpur,0.74,2021-10-13,213,100000,none
+44,Kamla Kala Handicrafts,Individual,handicrafts,Devgaon,Rampur,1.44,2018-12-23,1,100000,none
+45,Sunita Kala SHG,SHG,handicrafts,Jamunia,Betulpur,1.76,2022-02-22,10,250000,none
+46,Geeta Kala Handicrafts,FPO,handicrafts,Bhilai Kalan,Rampur,1.46,2019-07-26,120,150000,borderline
+47,Anita Kala Handicrafts,Individual,handicrafts,Lodhipura,Betulpur,0.72,2022-02-10,1,100000,none
+48,Rekha Kala SHG,SHG,handicrafts,Amarpur,Rampur,1.15,2019-01-03,15,60000,none
+49,Pushpa Kala Handicrafts,FPO,handicrafts,Khairwada,Betulpur,0.97,2019-06-21,144,150000,none
+50,Ramesh Kala Handicrafts,Individual,handicrafts,Devgaon,Rampur,1.63,2022-08-01,1,60000,borderline
+51,Suresh Kala SHG,SHG,handicrafts,Jamunia,Betulpur,1.46,2019-09-19,14,100000,none
+52,Mahesh Kala Handicrafts,FPO,handicrafts,Bhilai Kalan,Rampur,1.35,2022-10-06,145,60000,none
+53,Dinesh Kirana General Store,Individual,rural_retail,Hariharpur,Sundarganj,0.7,2020-04-02,1,250000,none
+54,Kailash Kirana SHG,SHG,rural_retail,Madhopur,Nadiya,0.65,2021-05-28,9,100000,none
+55,Santosh Kirana General Store,FPO,rural_retail,Gopalpura,Sundarganj,1.0,2020-03-13,66,150000,none
+56,Prakash Kirana General Store,Individual,rural_retail,Piparia,Nadiya,1.31,2022-12-11,1,250000,none
+57,Mukesh Kirana SHG,SHG,rural_retail,Chandpur,Sundarganj,1.71,2022-08-12,17,150000,borderline
+58,Rajesh Kirana General Store,FPO,rural_retail,Nayagaon,Nadiya,1.02,2020-06-08,146,100000,none
+59,Ganesh Kirana General Store,Individual,rural_retail,Lodhipura,Betulpur,1.75,2023-05-05,1,100000,drought
+60,Lakshmi Kirana SHG,SHG,rural_retail,Madhopur,Nadiya,1.54,2021-01-28,8,60000,borderline
+61,Savitri Kirana General Store,FPO,rural_retail,Gopalpura,Sundarganj,1.18,2020-02-23,128,100000,none
+62,Meera Kirana General Store,Individual,rural_retail,Piparia,Nadiya,1.29,2018-10-31,1,150000,none
+63,Radha Kirana SHG,SHG,rural_retail,Chandpur,Sundarganj,0.92,2021-02-13,17,100000,none
+64,Kamla Kirana General Store,FPO,rural_retail,Jamunia,Betulpur,1.22,2019-04-08,119,100000,drought

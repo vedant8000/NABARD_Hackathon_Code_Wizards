@@ -1,0 +1,56 @@
+{
+  "horizons": {
+    "1": {
+      "wape_model": 0.4423,
+      "wape_seasonal_naive": 0.7486,
+      "improvement_pct": 40.9,
+      "n_train": 960,
+      "n_val": 384
+    },
+    "2": {
+      "wape_model": 0.5321,
+      "wape_seasonal_naive": 0.7981,
+      "improvement_pct": 33.3,
+      "n_train": 960,
+      "n_val": 384
+    },
+    "3": {
+      "wape_model": 0.5753,
+      "wape_seasonal_naive": 0.7508,
+      "improvement_pct": 23.4,
+      "n_train": 960,
+      "n_val": 384
+    },
+    "4": {
+      "wape_model": 0.5073,
+      "wape_seasonal_naive": 0.7657,
+      "improvement_pct": 33.7,
+      "n_train": 960,
+      "n_val": 384
+    },
+    "5": {
+      "wape_model": 0.4828,
+      "wape_seasonal_naive": 0.8082,
+      "improvement_pct": 40.3,
+      "n_train": 960,
+      "n_val": 384
+    },
+    "6": {
+      "wape_model": 0.5158,
+      "wape_seasonal_naive": 0.8381,
+      "improvement_pct": 38.5,
+      "n_train": 960,
+      "n_val": 384
+    }
+  },
+  "n_rows": 1920,
+  "risk_classifier": {
+    "auc": 0.6581,
+    "avg_precision": 0.1102,
+    "precision_at_0.5": 0.0,
+    "recall_at_0.5": 0.0,
+    "positive_rate_val": 0.0703,
+    "n_train": 1216,
+    "n_val": 384
+  }
+}
