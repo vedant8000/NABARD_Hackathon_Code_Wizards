@@ -1,7 +1,19 @@
 /** Typed fetch client. GETs are cached into IndexedDB by the offline layer
- * (src/offline) so screens can render stale data when the network is gone. */
+ * (src/offline) so screens can render stale data when the network is gone.
+ *
+ * The backend runs on a separate host from the frontend in production
+ * (Vercel serves the static site; the API + WebSockets run on Render, since
+ * Vercel serverless functions can't hold long-lived WebSocket connections).
+ * VITE_API_BASE_URL points at that host; unset in local dev, where Vite's
+ * proxy keeps everything same-origin. */
 import { useStore } from "../state/store";
 import { cacheGet, cachePut } from "../offline/db";
+
+export const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/+$/, "") ?? "";
+
+function url(path: string): string {
+  return API_BASE + path;
+}
 
 export class ApiError extends Error {
   status: number;
@@ -37,7 +49,7 @@ async function handle(r: Response) {
 /** GET with offline fallback: network-first, cache in IndexedDB. */
 export async function apiGet<T = any>(path: string): Promise<T> {
   try {
-    const r = await fetch(path, { headers: headers() });
+    const r = await fetch(url(path), { headers: headers() });
     const data = await handle(r);
     void cachePut(path, data);
     return data as T;
@@ -50,7 +62,7 @@ export async function apiGet<T = any>(path: string): Promise<T> {
 }
 
 export async function apiPost<T = any>(path: string, body: unknown): Promise<T> {
-  const r = await fetch(path, {
+  const r = await fetch(url(path), {
     method: "POST", headers: headers(), body: JSON.stringify(body),
   });
   return handle(r) as Promise<T>;
@@ -62,7 +74,7 @@ export async function apiChatStream(
   onDelta: (text: string) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  const r = await fetch("/api/chat", {
+  const r = await fetch(url("/api/chat"), {
     method: "POST", headers: headers(), body: JSON.stringify(body), signal,
   });
   if (!r.ok || !r.body) {

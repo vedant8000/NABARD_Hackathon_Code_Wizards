@@ -13,7 +13,8 @@ from .. import store
 from ..config import settings
 from ..db import get_db
 from ..deps import require_officer
-from ..models import Alert, Intervention, LedgerEntry, User
+from ..models import Alert, Intervention
+from ..mongo import User
 from ..schemas import AckIn, InterventionIn, WhatIfIn
 from ..services import scoring
 
@@ -98,7 +99,7 @@ def enterprise_360(eid: int, user: User = Depends(require_officer),
     notes = db.scalars(select(Intervention).where(Intervention.enterprise_id == eid)
                        .order_by(Intervention.created_at.desc())).all()
     from .me import _app_entries
-    app = _app_entries(db, eid)
+    app = _app_entries(eid)
     emi = store.emi_info(eid, settings.DEMO_TODAY, extra_entries=app)
     return {
         "enterprise": ent,

@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends
 from .. import store
 from ..config import settings
 from ..deps import get_current_user
-from ..models import User
+from ..mongo import User
 
 router = APIRouter(prefix="/api/market", tags=["market"])
 

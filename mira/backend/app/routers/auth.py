@@ -1,18 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException
 
-from ..db import get_db
+from .. import mongo
 from ..deps import create_token, verify_password
-from ..models import User
 from ..schemas import LoginIn, LoginOut
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.post("/login", response_model=LoginOut)
-def login(body: LoginIn, db: Session = Depends(get_db)):
-    user = db.scalar(select(User).where(User.username == body.username))
+def login(body: LoginIn):
+    user = mongo.find_user_by_username(body.username)
     if user is None or not verify_password(body.password, user.password_hash):
         raise HTTPException(401, "Invalid username or password")
     return LoginOut(token=create_token(user), role=user.role,
@@ -20,10 +17,10 @@ def login(body: LoginIn, db: Session = Depends(get_db)):
 
 
 @router.get("/demo-users")
-def demo_users(db: Session = Depends(get_db)):
+def demo_users():
     """Demo persona shortcuts for the login screen (prototype convenience):
     one officer + one enterprise per band storyline (red / amber / green)."""
-    officers = db.scalars(select(User).where(User.role == "officer")).all()
+    officers = mongo.find_users_by_role("officer")
     from .. import store
     s = store.scores().merge(store.enterprises()[["id", "sector"]],
                              left_on="enterprise_id", right_on="id")
@@ -38,7 +35,7 @@ def demo_users(db: Session = Depends(get_db)):
     green = s[s.band == "green"].sort_values("mira_score", ascending=False)
     if len(green):
         picks.append(int(green.iloc[0].enterprise_id))
-    ents = db.scalars(select(User).where(User.enterprise_id.in_(picks))).all()
+    ents = mongo.find_users_by_enterprise_ids(picks)
     order = {eid: i for i, eid in enumerate(picks)}
     ents.sort(key=lambda u: order.get(u.enterprise_id, 9))
     ents_df = store.enterprises()

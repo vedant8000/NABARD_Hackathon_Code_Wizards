@@ -20,7 +20,8 @@ from .. import store
 from ..config import settings
 from ..db import get_db
 from ..deps import get_current_user
-from ..models import Alert, User
+from ..models import Alert
+from ..mongo import User
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -48,7 +49,7 @@ def credit_passport(eid: int, user: User = Depends(get_current_user),
         raise HTTPException(404, "Enterprise not found")
 
     from .me import _app_entries
-    app = _app_entries(db, eid)
+    app = _app_entries(eid)
     emi = store.emi_info(eid, settings.DEMO_TODAY, extra_entries=app)
     history = store.monthly_history(eid, months=12, extra_entries=app)
     fc = store.forecast_rows(eid)

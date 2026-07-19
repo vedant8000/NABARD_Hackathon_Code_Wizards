@@ -1,38 +1,28 @@
-"""Auth helpers: password hashing (pbkdf2), JWT issue/verify, role guards."""
+"""Auth helpers: password hashing (bcrypt), JWT issue/verify, role guards."""
 from __future__ import annotations
 
-import hashlib
-import hmac
-import os
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
-from sqlalchemy.orm import Session
 
+from . import mongo
 from .config import settings
-from .db import get_db
-from .models import User
+from .mongo import User
 
 _bearer = HTTPBearer(auto_error=False)
 
 
-# tunable so serverless cold starts (which re-seed 65 demo users) stay fast
-_PBKDF2_ITERS = int(os.environ.get("PBKDF2_ITERS", "100000"))
-
-
-def hash_password(password: str, salt: bytes | None = None) -> str:
-    salt = salt or os.urandom(16)
-    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, _PBKDF2_ITERS)
-    return salt.hex() + "$" + dk.hex()
+def hash_password(password: str) -> str:
+    """bcrypt generates and embeds a random per-password salt automatically."""
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 
 def verify_password(password: str, stored: str) -> bool:
     try:
-        salt_hex, dk_hex = stored.split("$")
-        dk = hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt_hex), _PBKDF2_ITERS)
-        return hmac.compare_digest(dk.hex(), dk_hex)
+        return bcrypt.checkpw(password.encode(), stored.encode())
     except ValueError:
         return False
 
@@ -50,7 +40,6 @@ def create_token(user: User) -> str:
 
 def get_current_user(
     creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
-    db: Session = Depends(get_db),
 ) -> User:
     if creds is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Missing token")
@@ -59,7 +48,7 @@ def get_current_user(
                              algorithms=[settings.JWT_ALGO])
     except JWTError:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid token")
-    user = db.get(User, int(payload["sub"]))
+    user = mongo.find_user_by_id(int(payload["sub"]))
     if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Unknown user")
     return user
