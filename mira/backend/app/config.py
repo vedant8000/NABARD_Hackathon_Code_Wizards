@@ -21,6 +21,18 @@ class Settings(BaseSettings):
     GEMINI_API_KEYS: str = ""  # comma-separated failover pool
     JWT_SECRET: str = "dev-secret-change-me"
 
+    MONGODB_URI: str = ""
+    MONGODB_DB_NAME: str = "mira"
+
+    # comma-separated extra origins allowed to call this API (e.g. the
+    # deployed Vercel frontend); localhost dev origins are always allowed
+    CORS_ORIGINS: str = ""
+
+    @property
+    def cors_origins(self) -> list[str]:
+        extra = [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+        return ["http://localhost:5173", "http://127.0.0.1:5173", *extra]
+
     @property
     def gemini_keys(self) -> list[str]:
         """All configured keys, in failover order."""
@@ -35,11 +47,7 @@ class Settings(BaseSettings):
     # demo clock — sits inside the engineered shock window (see generate_data.py)
     DEMO_TODAY: date = date(2026, 7, 15)
 
-    # serverless platforms have a read-only filesystem except /tmp
-    DB_URL: str = (
-        "sqlite:////tmp/mira.db" if os.environ.get("VERCEL")
-        else f"sqlite:///{os.path.join(DATA_DIR, 'mira.db')}"
-    )
+    DB_URL: str = f"sqlite:///{os.path.join(DATA_DIR, 'mira.db')}"
 
 
 settings = Settings()

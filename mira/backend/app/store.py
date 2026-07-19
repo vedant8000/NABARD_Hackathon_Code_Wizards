@@ -12,6 +12,7 @@ from functools import lru_cache
 
 import pandas as pd
 
+from . import mongo
 from .config import ARTIFACTS_DIR, DATA_DIR
 
 
@@ -77,9 +78,10 @@ def invalidate():
 
 # ---------------------------------------------------------------- helpers
 def enterprise_row(eid: int) -> dict | None:
-    df = enterprises()
-    m = df[df.id == eid]
-    return None if m.empty else m.iloc[0].to_dict()
+    """Per-enterprise profile facts (loan_principal, sector, village, ...).
+    Served from MongoDB (app/mongo.py: enterprise_profiles) — the one-time
+    generated enterprises.csv seeds it at startup but is no longer read here."""
+    return mongo.find_enterprise_profile(eid)
 
 
 def score_row(eid: int) -> dict | None:

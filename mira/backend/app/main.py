@@ -16,28 +16,53 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 
-from . import store
+from . import mongo, store
 from .config import DATA_DIR, settings
 from .db import Base, SessionLocal, engine
 from .deps import hash_password, require_officer
-from .models import Alert, User
+from .models import Alert
 
 DEMO_PASSWORD = "mira2026"
 
 
+def seed_mongo_users():
+    mongo.ensure_indexes()
+    if mongo.count_users() == 0:
+        ents = store.enterprises()
+        mongo.insert_user(mongo.User(
+            id=0, username="officer1", password_hash=hash_password(DEMO_PASSWORD),
+            role="officer", enterprise_id=None,
+            display_name="Anjali Verma (Field Officer)"))
+        for r in ents.itertuples():
+            mongo.insert_user(mongo.User(
+                id=int(r.id), username=f"udyami{r.id}",
+                password_hash=hash_password(DEMO_PASSWORD),
+                role="enterprise", enterprise_id=int(r.id), display_name=r.name))
+        print(f"seeded MongoDB users: 1 officer + {len(ents)} enterprises (password: {DEMO_PASSWORD})")
+
+
+def seed_mongo_enterprise_profiles():
+    """One-time copy of the ML pipeline's generated enterprises.csv into
+    MongoDB — enterprises.csv/ml/generate_data.py stay the source of truth
+    for the ML pipeline; Mongo is the serving copy the API reads."""
+    if mongo.count_enterprise_profiles() == 0:
+        ents = store.enterprises()
+        for r in ents.itertuples():
+            mongo.insert_enterprise_profile({
+                "id": int(r.id), "name": r.name, "type": r.type, "sector": r.sector,
+                "village": r.village, "district": r.district,
+                "size_factor": float(r.size_factor), "established_date": str(r.established_date),
+                "members_count": int(r.members_count), "loan_principal": float(r.loan_principal),
+                "shock": r.shock,
+            })
+        print(f"seeded MongoDB enterprise_profiles: {len(ents)} enterprises")
+
+
 def seed_db():
     Base.metadata.create_all(engine)
+    seed_mongo_users()
+    seed_mongo_enterprise_profiles()
     with SessionLocal() as db:
-        if db.scalar(select(User).limit(1)) is None:
-            ents = store.enterprises()
-            db.add(User(username="officer1", password_hash=hash_password(DEMO_PASSWORD),
-                        role="officer", display_name="Anjali Verma (Field Officer)"))
-            for r in ents.itertuples():
-                db.add(User(username=f"udyami{r.id}", password_hash=hash_password(DEMO_PASSWORD),
-                            role="enterprise", enterprise_id=int(r.id), display_name=r.name))
-            db.commit()
-            print(f"seeded users: 1 officer + {len(ents)} enterprises (password: {DEMO_PASSWORD})")
-
         if db.scalar(select(Alert).limit(1)) is None:
             path = os.path.join(DATA_DIR, "alerts.csv")
             if os.path.exists(path):
@@ -62,13 +87,13 @@ app = FastAPI(title="MIRA API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-from .routers import auth, chat, market, me, messages, portfolio, reports  # noqa: E402
+from .routers import auth, chat, market, me, messages, portfolio, reports, ws_chat  # noqa: E402
 
 app.include_router(auth.router)
 app.include_router(me.router)
@@ -77,6 +102,7 @@ app.include_router(market.router)
 app.include_router(chat.router)
 app.include_router(messages.router)
 app.include_router(reports.router)
+app.include_router(ws_chat.router)
 
 
 @app.get("/api/health")

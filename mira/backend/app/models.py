@@ -5,34 +5,16 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, Date, DateTime, Float, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base
 
-
-class User(Base):
-    __tablename__ = "users"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    username: Mapped[str] = mapped_column(String(64), unique=True, index=True)
-    password_hash: Mapped[str] = mapped_column(String(256))
-    role: Mapped[str] = mapped_column(String(16))  # 'officer' | 'enterprise'
-    enterprise_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    display_name: Mapped[str] = mapped_column(String(128), default="")
-
-
-class LedgerEntry(Base):
-    """Rows added through the app (the generated history stays in ledger.csv)."""
-    __tablename__ = "ledger_entries"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    client_uuid: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
-    enterprise_id: Mapped[int] = mapped_column(Integer, index=True)
-    date: Mapped[str] = mapped_column(String(10))  # ISO yyyy-mm-dd
-    kind: Mapped[str] = mapped_column(String(24))  # income|expense|savings_deposit|loan_repayment
-    category: Mapped[str] = mapped_column(String(48), default="other")
-    amount: Mapped[float] = mapped_column(Float)
-    note: Mapped[str] = mapped_column(Text, default="")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+# NOTE: users now live in MongoDB (see app/mongo.py: User dataclass +
+# users_collection()), as do enterprise profiles (enterprise_profiles),
+# app-entered ledger transactions (ledger_entries), and officer<->SHG direct
+# messages (direct_messages). This model file only covers state that is
+# still SQLite-backed.
 
 
 class Alert(Base):
@@ -60,19 +42,6 @@ class ChatMessage(Base):
     user_id: Mapped[int] = mapped_column(Integer, index=True)
     role: Mapped[str] = mapped_column(String(12))  # 'user' | 'model'
     content: Mapped[str] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-
-class DirectMessage(Base):
-    """Officer ↔ enterprise chat. One thread per enterprise_id."""
-    __tablename__ = "direct_messages"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    enterprise_id: Mapped[int] = mapped_column(Integer, index=True)
-    sender_role: Mapped[str] = mapped_column(String(16))  # 'officer' | 'enterprise'
-    sender_name: Mapped[str] = mapped_column(String(128), default="")
-    content: Mapped[str] = mapped_column(Text)
-    read_by_officer: Mapped[bool] = mapped_column(Boolean, default=False)
-    read_by_enterprise: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 

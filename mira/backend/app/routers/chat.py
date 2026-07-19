@@ -17,7 +17,8 @@ from .. import store
 from ..config import settings
 from ..db import SessionLocal, get_db
 from ..deps import get_current_user
-from ..models import ChatMessage, User
+from ..models import ChatMessage
+from ..mongo import User
 
 router = APIRouter(prefix="/api", tags=["chat"])
 
