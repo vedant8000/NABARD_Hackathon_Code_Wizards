@@ -12,6 +12,8 @@
 
 ---
 
+Agile Prototype : https://nabardcodewizards.vercel.app/
+
 ## 1. The Problem
 
 India's rural micro enterprises, including SHGs, FPOs, dairy units, poultry farms, handicraft clusters and village retail shops, run on thin margins and irregular cash flows. Financial stress builds silently: fodder prices creep up, a monsoon fails, savings deposits stop. By the time a missed EMI appears in a bank's records, the damage is already done. Field officers manage dozens of enterprises with no early visibility, and the enterprises themselves have no simple way to see what is coming.
